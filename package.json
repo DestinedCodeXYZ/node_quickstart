@@ -1,0 +1,21 @@
+{
+  "name": "node_quickstart",
+  "version": "1.0.0",
+  "main": "mongodb_test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "http-server ./"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "mongodb": "6.17",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

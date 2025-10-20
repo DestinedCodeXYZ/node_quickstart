@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Gmail API JS Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="font-family: system-ui; margin: 2rem;">
+    <h1>Gmail API Demo</h1>
+    <button id="authorize">Authorize</button>
+    <button id="signout" disabled>Sign out</button>
+    <pre id="out" style="white-space: pre-wrap; background:#f6f6f6; padding:1rem; border-radius:12px;"></pre>
+
+    <!-- Google API client (for REST calls) -->
+    <script async defer src="https://apis.google.com/js/api.js"></script>
+    <!-- Google Identity Services (for OAuth) -->
+    <script async defer src="https://accounts.google.com/gsi/client"></script>
+
+    <script type="module">
+      // ---- Config ----
+      const CLIENT_ID = "979011862956-2bcm04on8h0o48mlqko9scq434pk8po8.apps.googleusercontent.com";
+      const SCOPES = "https://www.googleapis.com/auth/gmail.readonly";
+      const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest";
+
+      const $ = (id) => document.getElementById(id);
+      const log = (x) => { $("out").textContent = typeof x === "string" ? x : JSON.stringify(x, null, 2); };
+
+      let tokenClient;
+      let gapiReady = false;
+
+      // Initialize gapi client for Gmail
+      window.onload = init;
+
+      async function init() {
+        await new Promise((res) => gapi.load("client", res));
+        await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+        gapiReady = true;
+
+        // Initialize OAuth token client (popup)
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: async (resp) => {
+            if (resp.error) { log(resp); return; }
+            $("signout").disabled = false;
+            await listLatestMessage();
+          },
+        });
+
+        $("authorize").onclick = () => {
+          if (!gapiReady) return;
+          tokenClient.requestAccessToken({ prompt: "consent" }); // first time, shows consent
+        };
+
+        $("signout").onclick = () => {
+          const token = gapi.client.getToken();
+          if (token) {
+            google.accounts.oauth2.revoke(token.access_token);
+            gapi.client.setToken(null);
+          }
+          $("signout").disabled = true;
+          log("Signed out.");
+        };
+      }
+
+      // Example: list messages and fetch metadata for the newest one
+      async function listLatestMessage() {
+        try {
+          const list = await gapi.client.gmail.users.messages.list({
+            userId: "me",
+            maxResults: 10,
+          });
+          const msgs = list.result.messages || [];
+          if (!msgs.length) { log("No messages."); return; }
+
+          const msg = await gapi.client.gmail.users.messages.get({
+            userId: "me",
+            id: msgs[0].id,
+            format: "metadata",
+            metadataHeaders: ["Subject", "From", "Date"],
+          });
+          log(msg.result);
+        } catch (e) {
+          log(e?.result || e);
+        }
+      }
+    </script>
+  </body>
+</html>

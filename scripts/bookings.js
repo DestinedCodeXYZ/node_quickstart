@@ -89,6 +89,7 @@ async function run() {
             { 
                 $project: {
                     _id: 0,
+                    createdAt: {$toDate: "$createdAt"},
                     ref: "$reference",
                     booker: {$first: "$acc.fullName"},
                     company: "$comp.name",
@@ -122,8 +123,8 @@ async function run() {
                     pet: "$pricing.costs.pet.amount",
                     cleaning: "$pricing.costs.cleaning.amount",
                     exitClean: "$pricing.costs.exitClean.amount",
-                    accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
-                    createdAt: 1
+                    accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired"
+                
                 }
             }
 

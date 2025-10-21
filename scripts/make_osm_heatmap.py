@@ -17,10 +17,14 @@ HEAT_BINS = 400                          # larger = smoother heat
 HEAT_ALPHA = 0.65                        # heat overlay opacity
 POINT_SIZE = 10
 POINT_ALPHA = 0.85
-OSM_ZOOM = 8                             # 6–8 works well for UK
 
-# UK bounding box in EPSG:3857 (Web Mercator)
-UK_BOUNDS = (-1300000, 700000, 6350000, 8550000)  # (xmin, xmax, ymin, ymax)
+# Zoomed-in and centered on the British Isles
+OSM_ZOOM = 10
+
+# Tighter, centered UK bounding box in EPSG:3857 (xmin, xmax, ymin, ymax)
+UK_BOUNDS = (-1_550_000, 350_000, 6_350_000, 8_500_000)
+# If you want *even tighter* (less sea, more land), try e.g.:
+# UK_BOUNDS = (-1_600_000, 250_000, 6_450_000, 8_450_000)
 
 # Major cities (lon, lat, name)
 CITIES = [
@@ -71,16 +75,20 @@ def main():
     fig, ax = plt.subplots(figsize=(10, 12))
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.set_facecolor((0, 0, 0, 0))  # transparent axes bg (just in case)
+    ax.set_facecolor((0, 0, 0, 0))  # transparent axes bg
 
-    # OSM basemap (UK only)
+    # OSM basemap (keep our extent; don’t let contextily recalc it)
     cx.add_basemap(
         ax,
         source=cx.providers.OpenStreetMap.Mapnik,
         crs=gdf.crs,
         zoom=OSM_ZOOM,
         attribution_size=6,
+        reset_extent=False,               # <-- keep our bounds
     )
+    # Re-apply bounds after basemap just in case
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
 
     # Points within UK bbox
     xs = gdf.geometry.x.values
@@ -88,13 +96,13 @@ def main():
     mask_uk = (xs >= xmin) & (xs <= xmax) & (ys >= ymin) & (ys <= ymax)
     xs_in, ys_in = xs[mask_uk], ys[mask_uk]
 
-    # Heat grid ONLY inside UK bbox (no zero-tinted background)
+    # Heat grid ONLY inside the UK bbox (no zero-tinted background)
     heat, xedges, yedges = np.histogram2d(
         ys_in, xs_in, bins=HEAT_BINS, range=[[ymin, ymax], [xmin, xmax]]
     )
     heat_T = heat.T
 
-    # Transparent colormap for zero-density areas (no purple tint)
+    # Transparent colormap for zero-density areas
     cmap = cm.get_cmap("YlOrRd").copy()  # or 'hot'
     heat_masked = np.ma.masked_equal(heat_T, 0)  # mask zeros
     cmap.set_bad(alpha=0)  # fully transparent where masked
@@ -122,7 +130,7 @@ def main():
 
     for _, row in cities_gdf.iterrows():
         ax.plot(row.geometry.x, row.geometry.y, marker="o", markersize=3, alpha=0.95)
-        ax.text(row.geometry.x + 10_000, row.geometry.y + 10_000, row["name"], fontsize=9, alpha=0.95)
+        ax.text(row.geometry.x + 10_000, row.geometry.y + 10_000, row["name"], fontsize=7, alpha=0.95)
 
     ax.set_xticks([])
     ax.set_yticks([])

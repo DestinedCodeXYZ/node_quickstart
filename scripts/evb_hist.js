@@ -279,6 +279,7 @@ async function run() {
             $project: {
             _id: 0,
             createdDate: "$createdAt",
+            bookedDate: "$bookingOne.createdAt",
             ref: "$reference",
             booker: {$first: "$acc.fullName"},
             client: "$client.fullName",

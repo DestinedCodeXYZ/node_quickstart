@@ -28,16 +28,50 @@ async function run() {
                 }
             },
 
+            // Joining accounts to get assigned booker
             { $lookup:
                 {
                     from: "accounts",
                     localField: "enq.assigned",
                     foreignField: "_id",
-                    as: "acc"
+                    as: "assigned"
                 }
             },
 
             { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
+
+            // Joining chosenproperties for detail on who added the selected property
+            { $lookup:
+                {
+                    from: "chosenproperties",
+                    localField: "enq.selectedPropertyId",
+                    foreignField: "_id",
+                    as: "chosenprop"
+                }
+            },
+
+            { $unwind: {path: "$chosenprop", preserveNullAndEmptyArrays: true} },
+
+            { $lookup:
+                {
+                    from: "properties",
+                    localField: "chosenprop.propertyRef",
+                    foreignField: "_id",
+                    as: "prop"
+                }
+            },
+
+            { $unwind: {path: "$prop", preserveNullAndEmptyArrays: true} },
+
+            // Joins onto chosenprop to get booker info
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "chosenprop.createdBy",
+                    foreignField: "_id",
+                    as: "addedBy"
+                }
+            },
 
             // Left join on clients collection
             { $lookup: 
@@ -91,7 +125,8 @@ async function run() {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
                     ref: "$reference",
-                    booker: {$first: "$acc.fullName"},
+                    assignedTo: {$first: "$assigned.fullName"},
+                    addedBy: {$first: "$addedBy.fullName"},
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
@@ -99,7 +134,8 @@ async function run() {
                     guestPhone2: { $first: { $slice: ["$client.phoneNumbers.phone", 1, 1] } },
                     guestEmail1: { $first: "$client.emailAddresses.email"},
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
-                    address: "$address.freeFormAddress",
+                    homeAddress: "$address.freeFormAddress",
+                    bookedAddress: "$prop.address.freeFormAddress",
                     landlord: "$landlord.name",
                     checkIn: {$toDate: "$checkIn"},
                     checkOut: {$toDate: "$checkOut"},

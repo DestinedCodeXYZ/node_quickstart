@@ -211,7 +211,7 @@ async function run() {
         let worksheet;
         let sheetName = "bookings_formatted";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\bookings_formatted.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\bookings_formatted.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

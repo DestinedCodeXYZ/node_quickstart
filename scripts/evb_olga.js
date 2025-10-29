@@ -366,7 +366,7 @@ async function run() {
         let worksheet;
         let sheetName = "offered out props - olga";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enqs_formatted.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\enqs_formatted.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

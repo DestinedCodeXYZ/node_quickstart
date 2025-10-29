@@ -314,7 +314,7 @@ async function run() {
         let worksheet;
         let sheetName = "oo props - dist";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\enq_hist.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

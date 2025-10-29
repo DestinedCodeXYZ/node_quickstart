@@ -197,7 +197,7 @@ async function run() {
         let worksheet;
         let sheetName = "property count";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\property_count.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\property_count.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

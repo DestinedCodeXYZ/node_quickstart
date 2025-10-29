@@ -52,7 +52,7 @@ async function run() {
         let worksheet;
         let sheetName = "ooPropTest";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\property_list.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\property_list.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

@@ -200,6 +200,7 @@ async function run() {
 
         { $unwind: { path: "$agent", preserveNullAndEmptyArrays: true } },
 
+        // Join accounts for assigned user
         {
             $lookup: { 
                 from: "accounts", 
@@ -208,7 +209,7 @@ async function run() {
                 as: "acc" 
             }
         },
-
+        // Join accounts for user who added property
         {
             $lookup: {
                 from: "accounts",
@@ -237,6 +238,7 @@ async function run() {
 
         { $unwind: { path: "$bookingOne", preserveNullAndEmptyArrays: true } },
 
+        // Join landlords by landlordRef to expose unsynced properties.
         {
             $lookup: {
                 from: "landlords",
@@ -285,6 +287,7 @@ async function run() {
                 "cpAll.status": {$ne: "rejected"}
             }
         },
+        
         // output
         {
             $project: {
@@ -350,6 +353,7 @@ async function run() {
             isBooking: "$isBooking",
             isExtension: "$bookingOne.extension.isExtension",
             isDecant: "$isDecant"
+
             }
         },
 

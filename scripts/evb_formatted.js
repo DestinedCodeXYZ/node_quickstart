@@ -349,6 +349,7 @@ async function run() {
             deposit: { $concat: ["£", { $toString: "$cpAll.costs.deposit.amount" } ] },
             petDeposit: { $concat: ["£", { $toString: "$cpAll.costs.petDeposit.amount" } ] },
             supply: "$supply",
+            propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
             accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             isBooking: "$isBooking",
             isExtension: "$bookingOne.extension.isExtension",

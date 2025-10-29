@@ -360,7 +360,7 @@ async function run() {
         console.log(enqs_vs_bookings)
 
         let worksheet;
-        let sheetName = "offered out properties";
+        let sheetName = "offered out props - olga";
         let workbook;
         let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enqs_formatted.xlsx';
 

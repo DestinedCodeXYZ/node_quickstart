@@ -299,7 +299,6 @@ async function run() {
             numOfParking: "$request.propertyPreferences.parking.spaces",
             parkingType: "$prop.parkingType.value",
             avgAirbnbPrice: "$averageAirbnbPrice",       
-            enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
             homePostcode: "$address.zip",
@@ -311,39 +310,43 @@ async function run() {
             landlordRate: "$cpAll.costs.nightlyRate.amount",
             propMargin: "$cpAll.costs.margin.amount",
             mhiyRate: {
-                $multiply: [
-                    "$cpAll.costs.nightlyRate.amount",
-                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                ]
-            },
-            icabRate: {
-                $round: [
-                    {
+                $concat: ["£", { 
+                    $toString: { 
                         $multiply: [
-                        {
-                            $multiply: [
                             "$cpAll.costs.nightlyRate.amount",
                             { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                                ]
-                        },
-                        1.15
-                    ]
-                    },
-                2 
+                        ]}
+                    }]
+            },
+            icabRate: { $concat: 
+                ["£", {
+                    $toString: {
+                        $round: [
+                            {
+                                $multiply: [
+                                {
+                                    $multiply: [
+                                    "$cpAll.costs.nightlyRate.amount",
+                                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                        ]
+                                },
+                                1.15
+                                    ]
+                            },
+                        2
+                    ]}}
             ]}, 
             
-            pet: "$cpAll.costs.petFee.amount",
-            landlordPet: "$cpAll.costs.petFee.landlordShare",
-            parking: "$cpAll.costs.parking.amount",
-            landlordParking: "$cpAll.costs.parking.landlordShare",
-            cleaning: "$cpAll.costs.cleaningFee.amount",
-            landlordCleaning: "$cpAll.costs.cleaningFee.landlordShare",
-            exitClean: "$cpAll.costs.exitClean.amount",
-            landlordExitClean: "$cpAll.costs.exitClean.landlordShare",
-            deposit: "$cpAll.costs.deposit.amount",
-            petDeposit: "$cpAll.costs.petDeposit.amount",
-            supply: "$supply",
-            accessibility: "$request.propertyPreferences.isAccessibilityRequired",
+            pet: { $concat: ["£", { $toString: "$cpAll.costs.petFee.amount" } ] } ,
+            landlordPet: { $concat: ["£", { $toString: "$cpAll.costs.petFee.landlordShare" } ] },
+            parking: { $concat: ["£", { $toString: "$cpAll.costs.parking.amount" } ] },
+            landlordParking: { $concat: ["£", { $toString: "$cpAll.costs.parking.landlordShare" } ] },
+            cleaning: { $concat: ["£", { $toString: "$cpAll.costs.cleaningFee.amount" } ] },
+            landlordCleaning: { $concat: ["£", { $toString: "$cpAll.costs.cleaningFee.landlordShare" } ] },
+            exitClean: { $concat: ["£", { $toString: "$cpAll.costs.exitClean.amount" } ] },
+            landlordExitClean: { $concat: ["£", { $toString: "$cpAll.costs.exitClean.landlordShare" } ] },
+            deposit: { $concat: ["£", { $toString: "$cpAll.costs.deposit.amount" } ] },
+            petDeposit: { $concat: ["£", { $toString: "$cpAll.costs.petDeposit.amount" } ] },
             isBooking: "$isBooking",
             isExtension: "$bookingOne.extension.isExtension",
             isDecant: "$isDecant"
@@ -359,7 +362,7 @@ async function run() {
         let worksheet;
         let sheetName = "offered out properties";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enqs_formatted.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

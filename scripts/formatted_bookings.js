@@ -152,27 +152,44 @@ async function run() {
                             }
                         },
                     supply: "$enq.supply",
+                    status: "$status",
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
                     isExtension: "$extension.isExtension",
                     isDecant: "$enq.isDecant",
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
                     parkingType: "$prop.parkingType.value",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",
-                    landlordPrice: "$pricing.info.landlordRate",
-                    quoteOutPrice: "$pricing.info.quoteOutPrice",
-                    mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
-                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
+                    landlordPrice:  { $concat: [ "£", { $toString: "$pricing.info.landlordRate"} ] },
+                    quoteOutPrice:  { $concat: [ "£", { $toString: "$pricing.info.quoteOutPrice"} ] },
+                    mhiyMargin: { $concat: [ { $toString: "$pricing.info.mhiyCommission" }, "%" ] },
+                    mhiyMarginVal: { $concat: 
+                        ["£", { $toString:
+                            { $round: [{ $multiply: 
+                                [
+                                    { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                                    "$pricing.info.landlordRate"
+                                ]
+                            }, 2]}
+                        }]
+                    },
+                    mhiyPrice: { $concat: 
+                        [ "£", { $toString: 
+                            { $round: [{ $multiply: 
+                                [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]
+                            }, 2]}
+                        }] 
+                    },
                     companyCommission: "$pricing.info.companyCommission",
-                    parking: "$pricing.costs.parking.amount",
-                    landlordParking: "$pricing.costs.parking.landlordRate",
-                    pet: "$pricing.costs.pet.amount",
-                    landlordPet: "$pricing.costs.pet.landlordRate",
-                    cleaning: "$pricing.costs.cleaning.amount",
-                    landlordCleaning: "$pricing.costs.cleaning.landlordRate",
-                    exitClean: "$pricing.costs.exitClean.amount",
-                    landlordExitClean: "$pricing.costs.exitClean.landlordRate",
-                    deposit: { $last: "$pricing.deposit.info.amount"},
-                    petDeposit: { $first: "$pricing.deposit.info.amount" } 
+                    parking: { $concat: ["£", { $toString: "$pricing.costs.parking.amount" } ] },
+                    landlordParking: {$concat: ["£", { $toString: "$pricing.costs.parking.landlordRate" } ] },
+                    pet: {$concat: ["£", { $toString: "$pricing.costs.pet.amount" } ] },
+                    landlordPet: {$concat: ["£", { $toString: "$pricing.costs.pet.landlordRate" } ] },
+                    cleaning: {$concat: ["£", { $toString: "$pricing.costs.cleaning.amount" } ] },
+                    landlordCleaning: {$concat: ["£", { $toString: "$pricing.costs.cleaning.landlordRate" } ] },
+                    exitClean: {$concat: ["£", { $toString: "$pricing.costs.exitClean.amount" } ] },
+                    landlordExitClean: {$concat: ["£", { $toString: "$pricing.costs.exitClean.landlordRate" } ] },
+                    deposit: {$concat: ["£", { $toString: { $last: "$pricing.deposit.info.amount" } } ] },
+                    petDeposit: {$concat: ["£", { $toString: { $first: "$pricing.deposit.info.amount" } } ] }
                 }
             }
 
@@ -182,9 +199,9 @@ async function run() {
 
 
         let worksheet;
-        let sheetName = "bookings";
+        let sheetName = "bookings_formatted";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\booking.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\bookings_formatted.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 
@@ -208,10 +225,10 @@ async function run() {
         worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
         
-        XLSX.writeFile(workbook, "booking.xlsx");
+        XLSX.writeFile(workbook, filePath);
 
         
-        console.log("Exported to booking.xlsx.");
+        console.log(`Exported to ${filePath}.`);
         
 } catch (err) {
         console.log(err.stack);

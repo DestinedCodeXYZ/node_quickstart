@@ -218,6 +218,15 @@ async function run() {
             }
         },
 
+        { $lookup:
+            {
+                from: "accounts",
+                localField: "enq.approval.approvedBy",
+                foreignField: "_id",
+                as: "approvedBy"
+            }
+        },
+
         // BOOKING: only the booking for this enquiry whose property == selectedPropertyId (latest one)
         {
             $lookup: {
@@ -294,6 +303,7 @@ async function run() {
             agent: "$agent.fullName",
             assignedTo: {$first: "$acc.fullName"},
             addedBy: {$first: "$addedBy.fullName"},
+            approvedBy: {$first: "$approvedBy.fullName"},
             client: "$client.fullName",
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",

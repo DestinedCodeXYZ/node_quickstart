@@ -303,13 +303,13 @@ async function run() {
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
             homePostcode: "$address.zip",
-            distanceinMi:"$distanceMi",
-            distanceinKm: "$distanceKm",
+            distanceinMi: { $concat: [{ $toString: "$distanceMi" }, "mi"]},
+            distanceinKm: { $concat: [{ $toString: "$distanceKm"}, "km"]},
             landlordName: "$landlord.name",
             landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
             landlordEmail: { $first: "$landlord.emailAddresses.email"},
             landlordRate: "$cpAll.costs.nightlyRate.amount",
-            propMargin: "$cpAll.costs.margin.amount",
+            propMargin: { $concat: [{ $toString: "$cpAll.costs.margin.amount" }, "%"]},
             mhiyRate: {
                 $concat: ["£", { 
                     $toString: { 

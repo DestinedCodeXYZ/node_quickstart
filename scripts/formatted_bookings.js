@@ -38,6 +38,15 @@ async function run() {
                 }
             },
 
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "enq.approval.approvedBy",
+                    foreignField: "_id",
+                    as: "approvedBy"
+                }
+            },
+
             { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
 
             // Joining chosenproperties for detail on who added the selected property
@@ -127,6 +136,7 @@ async function run() {
                     ref: "$reference",
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
+                    approvedBy: {$first: "$approvedBy.fullName"},
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",

@@ -308,6 +308,7 @@ async function run() {
             landlordName: "$landlord.name",
             landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
             landlordEmail: { $first: "$landlord.emailAddresses.email"},
+            cancellationType: "$prop.cancellationType",
             landlordRate: "$cpAll.costs.nightlyRate.amount",
             propMargin: { $concat: [{ $toString: "$cpAll.costs.margin.amount" }, "%"]},
             mhiyRate: {

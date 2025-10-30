@@ -310,8 +310,10 @@ async function run() {
             landlordName: "$landlord.name",
             landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
             landlordEmail: { $first: "$landlord.emailAddresses.email"},
-            landlordRate: "$cpAll.costs.nightlyRate.amount",
-            propMargin: { $concat: [{ $toString: "$cpAll.costs.margin.amount" }, "%"]},
+            landlordRate: { $concat: ["£", {$toString: "$cpAll.costs.nightlyRate.amount"}] },
+            marginVal: { $concat: 
+                [ "£",{ $toString: { $multiply: ["$cpAll.costs.nightlyRate.amount", { $divide: ["$cpAll.costs.margin.amount", 100] }]} }]
+            },
             mhiyRate: {
                 $concat: ["£", { 
                     $toString: { 

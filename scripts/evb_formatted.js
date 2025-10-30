@@ -221,7 +221,7 @@ async function run() {
         { $lookup:
             {
                 from: "accounts",
-                localField: "enq.approval.approvedBy",
+                localField: "approval.approvedBy",
                 foreignField: "_id",
                 as: "approvedBy"
             }

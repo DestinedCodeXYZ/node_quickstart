@@ -219,10 +219,10 @@ async function run() {
         worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
         
-        XLSX.writeFile(workbook, "booking.xlsx");
+        XLSX.writeFile(workbook, filePath);
 
         
-        console.log("Exported to booking.xlsx.");
+        console.log(`Exported to ${filePath}.`);
         
 } catch (err) {
         console.log(err.stack);

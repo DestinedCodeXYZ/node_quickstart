@@ -137,7 +137,6 @@ async function run() {
                     ref: "$reference",
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
-                    approvedBy: {$first: "$approvedBy.fullName"},
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",

@@ -43,6 +43,8 @@ async function run() {
     try {
         await client.connect();
         console.log("Successfully connected to Atlas!\n");
+
+        const start = new Date(Date.UTC(2025, 9, 1));
         
         const database = client.db('myhomeisyours-live');
         const enquiries = database.collection('enquiries');
@@ -50,6 +52,11 @@ async function run() {
         const enqs_vs_bookings = await enquiries.aggregate([
 
         { $match: { isDeleted: false, status: { $nin: ["cancelled"] } } },
+
+        { $match: {
+            createdAt: { $gte: start } 
+            }
+        },
 
         // one row per offered-out chosenproperty
         {
@@ -294,10 +301,10 @@ async function run() {
             _id: 0,
             createdDate: "$createdAt",
             ref: "$reference",
-            agent: "$agent.fullName",
-            assignedTo: {$first: "$acc.fullName"},
-            addedBy: {$first: "$addedBy.fullName"},
+            assignedTo: { $first: "$acc.fullName" },
+            addedBy: { $first: "$addedBy.fullName" },
             client: "$client.fullName",
+            duration: "$availability.expectedDuration",
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",
             parkingType: "$prop.parkingType.value",
@@ -310,50 +317,44 @@ async function run() {
             landlordName: "$landlord.name",
             landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
             landlordEmail: { $first: "$landlord.emailAddresses.email"},
-            landlordRate: { $concat: ["£", {$toString: "$cpAll.costs.nightlyRate.amount"}] },
-            marginVal: { $concat: 
-                [ "£",{ $toString: { $multiply: ["$cpAll.costs.nightlyRate.amount", { $divide: ["$cpAll.costs.margin.amount", 100] }]} }]
-            },
-            mhiyRate: {
-                $concat: ["£", { 
-                    $toString: { 
-                        $multiply: [
-                            "$cpAll.costs.nightlyRate.amount",
-                            { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                        ]}
-                    }]
-            },
-            icabRate: { $concat: 
-                ["£", {
-                    $toString: {
-                        $round: [
-                            {
-                                $multiply: [
-                                {
+            landlordRate: "$cpAll.costs.nightlyRate.amount",
+            margin: { $concat:[ { $toString: "$cpAll.costs.margin.amount" }, "%"] },
+            marginAmnt: { $multiply: ["$cpAll.costs.nightlyRate.amount", { $divide: ["$cpAll.costs.margin.amount", 100] }]},
+            mhiyRate: { $round: [ 
+                {$multiply: [
+                    "$cpAll.costs.nightlyRate.amount",
+                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                        ]
+                    }, 2]}
+                        ,
+            icabRate: {
+                $round: [
+                            { $multiply: 
+                                [{
                                     $multiply: [
                                     "$cpAll.costs.nightlyRate.amount",
                                     { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
                                         ]
                                 },
                                 1.15
-                                    ]
+                                ]
                             },
                         2
-                    ]}}
-            ]}, 
+                    ]}, 
             
-            pet: { $concat: ["£", { $toString: "$cpAll.costs.petFee.amount" } ] } ,
-            landlordPet: { $concat: ["£", { $toString: "$cpAll.costs.petFee.landlordShare" } ] },
-            parking: { $concat: ["£", { $toString: "$cpAll.costs.parking.amount" } ] },
-            landlordParking: { $concat: ["£", { $toString: "$cpAll.costs.parking.landlordShare" } ] },
-            cleaning: { $concat: ["£", { $toString: "$cpAll.costs.cleaningFee.amount" } ] },
-            landlordCleaning: { $concat: ["£", { $toString: "$cpAll.costs.cleaningFee.landlordShare" } ] },
-            exitClean: { $concat: ["£", { $toString: "$cpAll.costs.exitClean.amount" } ] },
-            landlordExitClean: { $concat: ["£", { $toString: "$cpAll.costs.exitClean.landlordShare" } ] },
-            deposit: { $concat: ["£", { $toString: "$cpAll.costs.deposit.amount" } ] },
-            petDeposit: { $concat: ["£", { $toString: "$cpAll.costs.petDeposit.amount" } ] },
+            pet: "$cpAll.costs.petFee.amount" ,
+            landlordPet: "$cpAll.costs.petFee.landlordShare",
+            parking: "$cpAll.costs.parking.amount",
+            landlordParking: "$cpAll.costs.parking.landlordShare",
+            cleaning: "$cpAll.costs.cleaningFee.amount",
+            landlordCleaning: "$cpAll.costs.cleaningFee.landlordShare",
+            exitClean: "$cpAll.costs.exitClean.amount",
+            landlordExitClean: "$cpAll.costs.exitClean.landlordShare",
+            deposit: "$cpAll.costs.deposit.amount",
+            petDeposit:"$cpAll.costs.petDeposit.amount",
+            propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
             isBooking: "$isBooking",
-            isExtension: "$bookingOne.extension.isExtension",
+            isExtension: { $ifNull: ["$extension.isExtension", "$bookingOne.extension.isExtension"]},
             isDecant: "$isDecant"
 
             }

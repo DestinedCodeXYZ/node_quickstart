@@ -44,7 +44,7 @@ async function run() {
         let worksheet;
         let sheetName = "accounts";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\booking.xlsx';
+        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\booking.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

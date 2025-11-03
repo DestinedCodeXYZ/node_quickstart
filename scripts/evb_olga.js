@@ -43,6 +43,8 @@ async function run() {
     try {
         await client.connect();
         console.log("Successfully connected to Atlas!\n");
+
+        const start = new Date(Date.UTC(2025, 9, 1));
         
         const database = client.db('myhomeisyours-live');
         const enquiries = database.collection('enquiries');
@@ -50,6 +52,11 @@ async function run() {
         const enqs_vs_bookings = await enquiries.aggregate([
 
         { $match: { isDeleted: false, status: { $nin: ["cancelled"] } } },
+
+        { $match: {
+            createdAt: { $gte: start } 
+            }
+        },
 
         // one row per offered-out chosenproperty
         {
@@ -200,6 +207,7 @@ async function run() {
 
         { $unwind: { path: "$agent", preserveNullAndEmptyArrays: true } },
 
+        // Join accounts for assigned user
         {
             $lookup: { 
                 from: "accounts", 
@@ -208,7 +216,7 @@ async function run() {
                 as: "acc" 
             }
         },
-
+        // Join accounts for user who added property
         {
             $lookup: {
                 from: "accounts",
@@ -237,6 +245,7 @@ async function run() {
 
         { $unwind: { path: "$bookingOne", preserveNullAndEmptyArrays: true } },
 
+        // Join landlords by landlordRef to expose unsynced properties.
         {
             $lookup: {
                 from: "landlords",
@@ -285,54 +294,55 @@ async function run() {
                 "cpAll.status": {$ne: "rejected"}
             }
         },
+        
         // output
         {
             $project: {
             _id: 0,
             createdDate: "$createdAt",
             ref: "$reference",
-            agent: "$agent.fullName",
-            assignedTo: {$first: "$acc.fullName"},
-            addedBy: {$first: "$addedBy.fullName"},
+            assignedTo: { $first: "$acc.fullName" },
+            addedBy: { $first: "$addedBy.fullName" },
             client: "$client.fullName",
+            duration: "$availability.expectedDuration",
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",
             parkingType: "$prop.parkingType.value",
             avgAirbnbPrice: "$averageAirbnbPrice",       
-            enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
             homePostcode: "$address.zip",
-            distanceinMi:"$distanceMi",
-            distanceinKm: "$distanceKm",
+            distanceinMi: { $concat: [{ $toString: "$distanceMi" }, "mi"]},
+            distanceinKm: { $concat: [{ $toString: "$distanceKm"}, "km"]},
             landlordName: "$landlord.name",
             landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
             landlordEmail: { $first: "$landlord.emailAddresses.email"},
             landlordRate: "$cpAll.costs.nightlyRate.amount",
-            propMargin: "$cpAll.costs.margin.amount",
-            mhiyRate: {
-                $multiply: [
+            margin: { $concat:[ { $toString: "$cpAll.costs.margin.amount" }, "%"] },
+            marginAmnt: { $multiply: ["$cpAll.costs.nightlyRate.amount", { $divide: ["$cpAll.costs.margin.amount", 100] }]},
+            mhiyRate: { $round: [ 
+                {$multiply: [
                     "$cpAll.costs.nightlyRate.amount",
                     { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                ]
-            },
+                        ]
+                    }, 2]}
+                        ,
             icabRate: {
                 $round: [
-                    {
-                        $multiply: [
-                        {
-                            $multiply: [
-                            "$cpAll.costs.nightlyRate.amount",
-                            { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                            { $multiply: 
+                                [{
+                                    $multiply: [
+                                    "$cpAll.costs.nightlyRate.amount",
+                                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                        ]
+                                },
+                                1.15
                                 ]
-                        },
-                        1.15
-                    ]
-                    },
-                2 
-            ]}, 
+                            },
+                        2
+                    ]}, 
             
-            pet: "$cpAll.costs.petFee.amount",
+            pet: "$cpAll.costs.petFee.amount" ,
             landlordPet: "$cpAll.costs.petFee.landlordShare",
             parking: "$cpAll.costs.parking.amount",
             landlordParking: "$cpAll.costs.parking.landlordShare",
@@ -341,12 +351,12 @@ async function run() {
             exitClean: "$cpAll.costs.exitClean.amount",
             landlordExitClean: "$cpAll.costs.exitClean.landlordShare",
             deposit: "$cpAll.costs.deposit.amount",
-            petDeposit: "$cpAll.costs.petDeposit.amount",
-            supply: "$supply",
-            accessibility: "$request.propertyPreferences.isAccessibilityRequired",
+            petDeposit:"$cpAll.costs.petDeposit.amount",
+            propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
             isBooking: "$isBooking",
-            isExtension: "$bookingOne.extension.isExtension",
+            isExtension: { $ifNull: ["$extension.isExtension", "$bookingOne.extension.isExtension"]},
             isDecant: "$isDecant"
+
             }
         },
 
@@ -357,9 +367,9 @@ async function run() {
         console.log(enqs_vs_bookings)
 
         let worksheet;
-        let sheetName = "offered out properties";
+        let sheetName = "offered out props - olga";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\\kevro\\Documents\\Excel Files\\enqs_formatted.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

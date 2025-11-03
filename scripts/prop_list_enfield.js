@@ -130,7 +130,7 @@ async function run() {
         let worksheet;
         let sheetName = "property list enfield";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\property_list_enfield.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list_enfield.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

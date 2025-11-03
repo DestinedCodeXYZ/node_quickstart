@@ -22,7 +22,7 @@ async function run() {
             {
                 $match : {"isDeleted" : false}
             },
-
+/*
             { 
                 $lookup : {
                     from: "properties",
@@ -38,7 +38,7 @@ async function run() {
                     preserveNullAndEmptyArrays: true
                 }
             },
-
+*/
             {
                 $project : {
                     name : "$name",
@@ -63,7 +63,7 @@ async function run() {
         let worksheet;
         let sheetName = "landlords";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\booking.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\\Excel Files\\property_count.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         
@@ -87,10 +87,10 @@ async function run() {
         worksheet = XLSX.utils.json_to_sheet(supplier);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
                 
-        XLSX.writeFile(workbook, "booking.xlsx");
+        XLSX.writeFile(workbook, filePath);
         
                 
-        console.log("Exported to booking.xlsx");
+        console.log(`Exported to ${filePath}`);
     } 
     catch (err) {
         console.log(err.stack);

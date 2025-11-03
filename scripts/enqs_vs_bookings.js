@@ -359,7 +359,7 @@ async function run() {
         let worksheet;
         let sheetName = "offered out properties";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enq_hist.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

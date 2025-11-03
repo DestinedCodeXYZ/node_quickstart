@@ -137,7 +137,7 @@ async function run() {
         let worksheet;
         let sheetName = "extensions";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\Excel Files\\booking.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

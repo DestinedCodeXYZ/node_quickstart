@@ -25,7 +25,7 @@ async function run() {
                     createdAt: { $gte: start } 
                 }
             },
-            
+
             {
                 $lookup: {
                     from: "enquiries",
@@ -45,6 +45,7 @@ async function run() {
                 }
             },
 
+            // Joining accounts to get who approved costs
             { $lookup:
                 {
                     from: "accounts",
@@ -143,7 +144,7 @@ async function run() {
                     ref: "$reference",
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
-                    approvedBy: {$first: "$approvedBy.fullName"},
+                    approvedBy:  {$first: "$approvedBy.fullName"},
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
@@ -169,44 +170,27 @@ async function run() {
                             }
                         },
                     supply: "$enq.supply",
-                    status: "$status",
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
                     isExtension: "$extension.isExtension",
                     isDecant: "$enq.isDecant",
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
                     parkingType: "$prop.parkingType.value",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",
-                    landlordPrice:  { $concat: [ "£", { $toString: "$pricing.info.landlordRate"} ] },
-                    quoteOutPrice:  { $concat: [ "£", { $toString: "$pricing.info.quoteOutPrice"} ] },
-                    mhiyMargin: { $concat: [ { $toString: "$pricing.info.mhiyCommission" }, "%" ] },
-                    mhiyMarginVal: { $concat: 
-                        ["£", { $toString:
-                            { $round: [{ $multiply: 
-                                [
-                                    { $divide: [ "$pricing.info.mhiyCommission", 100] },
-                                    "$pricing.info.landlordRate"
-                                ]
-                            }, 2]}
-                        }]
-                    },
-                    mhiyPrice: { $concat: 
-                        [ "£", { $toString: 
-                            { $round: [{ $multiply: 
-                                [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]
-                            }, 2]}
-                        }] 
-                    },
+                    landlordPrice: "$pricing.info.landlordRate",
+                    quoteOutPrice: "$pricing.info.quoteOutPrice",
+                    mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
-                    parking: { $concat: ["£", { $toString: "$pricing.costs.parking.amount" } ] },
-                    landlordParking: {$concat: ["£", { $toString: "$pricing.costs.parking.landlordRate" } ] },
-                    pet: {$concat: ["£", { $toString: "$pricing.costs.pet.amount" } ] },
-                    landlordPet: {$concat: ["£", { $toString: "$pricing.costs.pet.landlordRate" } ] },
-                    cleaning: {$concat: ["£", { $toString: "$pricing.costs.cleaning.amount" } ] },
-                    landlordCleaning: {$concat: ["£", { $toString: "$pricing.costs.cleaning.landlordRate" } ] },
-                    exitClean: {$concat: ["£", { $toString: "$pricing.costs.exitClean.amount" } ] },
-                    landlordExitClean: {$concat: ["£", { $toString: "$pricing.costs.exitClean.landlordRate" } ] },
-                    deposit: {$concat: ["£", { $toString: { $last: "$pricing.deposit.info.amount" } } ] },
-                    petDeposit: {$concat: ["£", { $toString: { $first: "$pricing.deposit.info.amount" } } ] }
+                    parking: "$pricing.costs.parking.amount",
+                    landlordParking: "$pricing.costs.parking.landlordRate",
+                    pet: "$pricing.costs.pet.amount",
+                    landlordPet: "$pricing.costs.pet.landlordRate",
+                    cleaning: "$pricing.costs.cleaning.amount",
+                    landlordCleaning: "$pricing.costs.cleaning.landlordRate",
+                    exitClean: "$pricing.costs.exitClean.amount",
+                    landlordExitClean: "$pricing.costs.exitClean.landlordRate",
+                    deposit: { $last: "$pricing.deposit.info.amount"},
+                    petDeposit: { $first: "$pricing.deposit.info.amount" } 
                 }
             }
 
@@ -216,9 +200,9 @@ async function run() {
 
 
         let worksheet;
-        let sheetName = "bookings_formatted";
+        let sheetName = "bookings";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\bookings_formatted.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking_hist.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

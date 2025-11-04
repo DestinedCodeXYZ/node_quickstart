@@ -66,7 +66,7 @@ async function run() {
         let worksheet;
         let sheetName = "ooTime";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\ooTime.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\ooTime.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

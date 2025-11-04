@@ -209,6 +209,15 @@ async function run() {
             }
         },
 
+        {
+            $lookup: {
+                from: "accounts",
+                localField: "cpAll.createdBy",
+                foreignField: "_id",
+                as: "addedBy"
+            }
+        },
+
         // BOOKING: only the booking for this enquiry whose property == selectedPropertyId (latest one)
         {
             $lookup: {
@@ -225,8 +234,19 @@ async function run() {
                 as: "bookingOne"
             }
         },
+
         { $unwind: { path: "$bookingOne", preserveNullAndEmptyArrays: true } },
 
+        {
+            $lookup: {
+                from: "landlords",
+                localField: "prop.landlordRef",
+                foreignField: "_id",
+                as: "landlord"
+            }
+        },
+
+        {$unwind: {path: "$landlord", preserveNullAndEmptyArrays: true} },
         // client for that one booking (if present)
         {
             $lookup: {
@@ -271,45 +291,62 @@ async function run() {
             _id: 0,
             createdDate: "$createdAt",
             ref: "$reference",
-            booker: {$first: "$acc.fullName"},
+            agent: "$agent.fullName",
+            assignedTo: {$first: "$acc.fullName"},
+            addedBy: {$first: "$addedBy.fullName"},
             client: "$client.fullName",
+            numOfPets: "$request.propertyPreferences.totalPets",
+            numOfParking: "$request.propertyPreferences.parking.spaces",
+            parkingType: "$prop.parkingType.value",
+            avgAirbnbPrice: "$averageAirbnbPrice",       
             enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
             homePostcode: "$address.zip",
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
-            landlordName: "$prop.landlord.name",
+            landlordName: "$landlord.name",
+            landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
+            landlordEmail: { $first: "$landlord.emailAddresses.email"},
             landlordRate: "$cpAll.costs.nightlyRate.amount",
             propMargin: "$cpAll.costs.margin.amount",
             mhiyRate: {
                 $multiply: [
-                "$cpAll.costs.nightlyRate.amount",
-                { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                    "$cpAll.costs.nightlyRate.amount",
+                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
                 ]
             },
             icabRate: {
                 $round: [
-                {
-                    $multiply: [
                     {
                         $multiply: [
-                        "$cpAll.costs.nightlyRate.amount",
-                        { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                        ]
-                    },
-                    1.15
+                        {
+                            $multiply: [
+                            "$cpAll.costs.nightlyRate.amount",
+                            { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                ]
+                        },
+                        1.15
                     ]
-                },
-                2
-                ]
-            },
-            agent: "$agent.fullName",
-            avgAirbnbPrice: "$averageAirbnbPrice",
+                    },
+                2 
+            ]}, 
+            
+            pet: "$cpAll.costs.petFee.amount",
+            landlordPet: "$cpAll.costs.petFee.landlordShare",
+            parking: "$cpAll.costs.parking.amount",
+            landlordParking: "$cpAll.costs.parking.landlordShare",
+            cleaning: "$cpAll.costs.cleaningFee.amount",
+            landlordCleaning: "$cpAll.costs.cleaningFee.landlordShare",
+            exitClean: "$cpAll.costs.exitClean.amount",
+            landlordExitClean: "$cpAll.costs.exitClean.landlordShare",
+            deposit: "$cpAll.costs.deposit.amount",
+            petDeposit: "$cpAll.costs.petDeposit.amount",
             supply: "$supply",
             accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             isBooking: "$isBooking",
-            isExtension: "$bookingOne.extension.isExtension"
+            isExtension: "$bookingOne.extension.isExtension",
+            isDecant: "$isDecant"
             }
         },
 
@@ -322,7 +359,7 @@ async function run() {
         let worksheet;
         let sheetName = "offered out properties";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enq_hist.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

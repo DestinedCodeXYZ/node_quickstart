@@ -28,16 +28,60 @@ async function run() {
                 }
             },
 
+            // Joining accounts to get assigned booker
             { $lookup:
                 {
                     from: "accounts",
                     localField: "enq.assigned",
                     foreignField: "_id",
-                    as: "acc"
+                    as: "assigned"
+                }
+            },
+
+            // Joining accounts to get who approved costs
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "enq.approval.approvedBy",
+                    foreignField: "_id",
+                    as: "approvedBy"
                 }
             },
 
             { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
+
+            // Joining chosenproperties for detail on who added the selected property
+            { $lookup:
+                {
+                    from: "chosenproperties",
+                    localField: "enq.selectedPropertyId",
+                    foreignField: "_id",
+                    as: "chosenprop"
+                }
+            },
+
+            { $unwind: {path: "$chosenprop", preserveNullAndEmptyArrays: true} },
+
+            { $lookup:
+                {
+                    from: "properties",
+                    localField: "chosenprop.propertyRef",
+                    foreignField: "_id",
+                    as: "prop"
+                }
+            },
+
+            { $unwind: {path: "$prop", preserveNullAndEmptyArrays: true} },
+
+            // Joins onto chosenprop to get booker info
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "chosenprop.createdBy",
+                    foreignField: "_id",
+                    as: "addedBy"
+                }
+            },
 
             // Left join on clients collection
             { $lookup: 
@@ -89,8 +133,10 @@ async function run() {
             { 
                 $project: {
                     _id: 0,
+                    createdAt: {$toDate: "$createdAt"},
                     ref: "$reference",
-                    booker: {$first: "$acc.fullName"},
+                    assignedTo: {$first: "$assigned.fullName"},
+                    addedBy: {$first: "$addedBy.fullName"},
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
@@ -98,11 +144,15 @@ async function run() {
                     guestPhone2: { $first: { $slice: ["$client.phoneNumbers.phone", 1, 1] } },
                     guestEmail1: { $first: "$client.emailAddresses.email"},
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
-                    address: "$address.freeFormAddress",
+                    homeAddress: "$address.freeFormAddress",
+                    bookedAddress: "$prop.address.freeFormAddress",
                     landlord: "$landlord.name",
+                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
+                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
                     checkIn: {$toDate: "$checkIn"},
                     checkOut: {$toDate: "$checkOut"},
                     duration: {$toInt: "$expectedDuration"},
+                    cancellationType: "$cancellationType",
                     avgAirbnbPrice: {  
                         $convert: {
                             input: "$enq.averageAirbnbPrice",
@@ -112,22 +162,31 @@ async function run() {
                             }
                         },
                     supply: "$enq.supply",
-                    status: "$status",
+                    accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
                     isExtension: "$extension.isExtension",
+                    isDecant: "$enq.isDecant",
+                    numOfParking: "$enq.request.propertyPreferences.parking.spaces",
+                    parkingType: "$prop.parkingType.value",
+                    numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
-                    mhiyMargin: "$pricing.info.mhiyCommission",
+                    mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
+                    landlordParking: "$pricing.costs.parking.landlordRate",
                     pet: "$pricing.costs.pet.amount",
+                    landlordPet: "$pricing.costs.pet.landlordRate",
                     cleaning: "$pricing.costs.cleaning.amount",
+                    landlordCleaning: "$pricing.costs.cleaning.landlordRate",
                     exitClean: "$pricing.costs.exitClean.amount",
-                    accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
-                    createdAt: 1
+                    landlordExitClean: "$pricing.costs.exitClean.landlordRate",
+                    deposit: { $last: "$pricing.deposit.info.amount"},
+                    petDeposit: { $first: "$pricing.deposit.info.amount" } 
                 }
             }
 
-        ]).sort({ guest: 1 }).toArray();
+        ]).sort({ createdAt: 1 }).toArray();
 
         console.log(pricing)
 
@@ -135,7 +194,7 @@ async function run() {
         let worksheet;
         let sheetName = "bookings";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\booking.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 
@@ -159,10 +218,10 @@ async function run() {
         worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
         
-        XLSX.writeFile(workbook, "booking.xlsx");
+        XLSX.writeFile(workbook, filePath);
 
         
-        console.log("Exported to booking.xlsx.");
+        console.log(`Exported to ${filePath}.`);
         
 } catch (err) {
         console.log(err.stack);

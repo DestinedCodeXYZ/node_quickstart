@@ -130,7 +130,7 @@ async function run() {
         let worksheet;
         let sheetName = "property list portsmouth";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\property_list_portsmouth.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list_portsmouth.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

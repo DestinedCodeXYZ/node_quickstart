@@ -146,7 +146,7 @@ async function run() {
         let worksheet;
         let sheetName = "oo props - accessible";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enqlist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enqlist.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

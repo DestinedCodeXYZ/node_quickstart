@@ -279,6 +279,7 @@ async function run() {
             $project: {
             _id: 0,
             createdDate: "$createdAt",
+            bookedDate: "$bookingOne.createdAt",
             ref: "$reference",
             booker: {$first: "$acc.fullName"},
             client: "$client.fullName",
@@ -331,7 +332,7 @@ async function run() {
         let worksheet;
         let sheetName = "oo props - oct";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\node_quickstart\\scripts\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enq_hist.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

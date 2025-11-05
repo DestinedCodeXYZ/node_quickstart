@@ -65,6 +65,7 @@ async function run() {
         {
             $project: {
                 _id: 0,
+                createdDate: {$toDate: "$createdAt"},
                 ref: "$reference",
                 agent : "$acc.fullName",
                 company: "$comp.name",
@@ -72,7 +73,6 @@ async function run() {
                 checkIn: "$availability.checkIn",
                 checkOut: "$availability.checkOut",
                 averageAirbnbPrice: "$averageAirbnbPrice",
-                createdDate: {$toDate: "$createdAt"},
                 status: "$status",
                 isExtension: "$extension.isExtension",
                 accessibility: "$request.propertyPreferences.isAccessibilityRequired",

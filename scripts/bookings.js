@@ -166,6 +166,7 @@ async function run() {
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
                     isExtension: "$extension.isExtension",
                     isDecant: "$enq.isDecant",
+                    propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
                     parkingType: "$prop.parkingType.value",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",

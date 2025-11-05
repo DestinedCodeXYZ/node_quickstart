@@ -40,19 +40,16 @@ async function run() {
             },
 */
             {
-                $project : {
-                    name : "$name",
-                    email : { $first : "$emailAddresses.email" },
-                    phone : { $first : "$phoneNumbers.phone" },
-                    company : "$company.name",
-                    propName: "$prop.name"
+                $project: {
+                    name: "$name",
+                    phone1: { $first : "$phoneNumbers.phone" },
+                    phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
+                    _id: { $toString: "$_id" },
                 }
             },
 
-            { $project: {_id: 0} },
-
             {
-                $sort : {name : 1}
+                $sort : {_id : 1}
             },
 
         ]).toArray();

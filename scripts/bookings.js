@@ -154,6 +154,7 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
+                    cancellation: "$cancellation",
                     avgAirbnbPrice: {  
                         $convert: {
                             input: "$enq.averageAirbnbPrice",

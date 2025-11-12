@@ -41,7 +41,6 @@ async function run() {
 
             {
                 $project: {
-                    createdAt: "$createdAt",
                     landlord: "$name",
                     phone1: { $first : "$phoneNumbers.phone" },
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
@@ -63,7 +62,7 @@ async function run() {
         let worksheet;
         let sheetName = "landlords";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\\Excel Files\\property_count.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\\Excel Files\\ll.xlsx';
         
         // If file exists, modify it. Otherwise, create new file.
         if (fs.existsSync(filePath)) {

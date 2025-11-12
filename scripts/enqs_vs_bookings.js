@@ -285,6 +285,24 @@ async function run() {
                 "cpAll.status": {$ne: "rejected"}
             }
         },
+
+        {
+            $addFields: {
+                cancellationPolicy: {
+                    $convert: {
+                        input: {
+                            $getField: {
+                                field: "match",
+                                input: {$regexFind: { input: "$prop.cancellationType", regex: /\d+/ }}
+                            }
+                        },
+                        to: "int",
+                        onError: null,
+                        onNull: null
+                    }
+                }
+            }
+        },
         // output
         {
             $project: {
@@ -295,6 +313,9 @@ async function run() {
             assignedTo: {$first: "$acc.fullName"},
             addedBy: {$first: "$addedBy.fullName"},
             client: "$client.fullName",
+            checkIn: "$availability.checkIn",
+            checkOut: "$availability.checkOut",
+            duration: {$toInt: "$availability.expectedDuration"},
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",
             parkingType: "$prop.parkingType.value",
@@ -309,6 +330,7 @@ async function run() {
             landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
             landlordEmail: { $first: "$landlord.emailAddresses.email"},
             landlordRate: "$cpAll.costs.nightlyRate.amount",
+            cancellation: "$cancellationPolicy",
             propMargin: "$cpAll.costs.margin.amount",
             mhiyRate: {
                 $multiply: [
@@ -319,18 +341,15 @@ async function run() {
             icabRate: {
                 $round: [
                     {
-                        $multiply: [
-                        {
+                        $multiply: [{
                             $multiply: [
                             "$cpAll.costs.nightlyRate.amount",
                             { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
                                 ]
-                        },
-                        1.15
-                    ]
+                        }, 1.15]
                     },
-                2 
-            ]}, 
+                2]
+            }, 
             
             pet: "$cpAll.costs.petFee.amount",
             landlordPet: "$cpAll.costs.petFee.landlordShare",
@@ -350,7 +369,7 @@ async function run() {
             }
         },
 
-        { $sort: { ref: 1, propName: 1 } }
+        { $sort: { createdAt: 1, propName: 1 } }
       
         ]).toArray();
 

@@ -20,6 +20,12 @@ async function run() {
         const pricing = await bookings.aggregate([
 
             {
+                $match: {
+                    status: { $nin: ["cancelled"] }
+                }
+            },
+
+            {
                 $lookup: {
                     from: "enquiries",
                     localField: "enquiry",
@@ -121,7 +127,7 @@ async function run() {
             { $lookup:
                 {
                     from: "landlords",
-                    localField: "landlord",
+                    localField: "prop.landlordRef",
                     foreignField: "_id",
                     as: "landlord"
                 }

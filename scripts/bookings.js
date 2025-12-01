@@ -128,7 +128,7 @@ async function run() {
             { $lookup:
                 {
                     from: "landlords",
-                    localField: "landlord",
+                    localField: "prop.landlordRef",
                     foreignField: "_id",
                     as: "landlord"
                 }

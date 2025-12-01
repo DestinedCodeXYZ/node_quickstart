@@ -3,7 +3,7 @@ const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const start = new Date(Date.UTC(2025, 9, 1));
+const start = new Date(Date.UTC(2025, 10, 1));
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
 
@@ -22,7 +22,9 @@ async function run() {
 
             { 
                 $match: {
-                    createdAt: { $gte: start } 
+                    createdAt: { $gte: start },
+                    status: { $nin: ["cancelled"] },
+                    isDeleted: false 
                 }
             },
 
@@ -128,7 +130,7 @@ async function run() {
             { $lookup:
                 {
                     from: "landlords",
-                    localField: "landlord",
+                    localField: "prop.landlordRef",
                     foreignField: "_id",
                     as: "landlord"
                 }
@@ -161,6 +163,7 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
+                    cancellation: "$cancellation",
                     avgAirbnbPrice: {  
                         $convert: {
                             input: "$enq.averageAirbnbPrice",
@@ -173,6 +176,7 @@ async function run() {
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
                     isExtension: "$extension.isExtension",
                     isDecant: "$enq.isDecant",
+                    propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
                     parkingType: "$prop.parkingType.value",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",

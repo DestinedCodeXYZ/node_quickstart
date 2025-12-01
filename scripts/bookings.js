@@ -20,6 +20,13 @@ async function run() {
         const pricing = await bookings.aggregate([
 
             {
+                $match: {
+                    status: { $nin: ["cancelled"] },
+                    isDeleted: false
+                }
+            },
+
+            {
                 $lookup: {
                     from: "enquiries",
                     localField: "enquiry",
@@ -121,7 +128,7 @@ async function run() {
             { $lookup:
                 {
                     from: "landlords",
-                    localField: "landlord",
+                    localField: "prop.landlordRef",
                     foreignField: "_id",
                     as: "landlord"
                 }
@@ -154,6 +161,7 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
+                    cancellation: "$cancellation",
                     avgAirbnbPrice: {  
                         $convert: {
                             input: "$enq.averageAirbnbPrice",

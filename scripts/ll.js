@@ -42,6 +42,7 @@ async function run() {
             {
                 $project: {
                     landlord: "$name",
+                    email1: { $first: "$emailAddresses.email"} ,
                     phone1: { $first : "$phoneNumbers.phone" },
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
                     _id: { $toString: "$_id" },
@@ -52,7 +53,7 @@ async function run() {
 
             {
                 $sort : {_id : 1}
-            },
+            }
 
         ]).toArray();
 
@@ -104,6 +105,7 @@ async function run() {
             if (!byId.has(id)) {
             byId.set(id, {
                 landlord: row.landlord ?? "",
+                email1: row.email1 ? String(row.email1).trim() : null,
                 phone1: row.phone1 ? String(row.phone1).trim() : null,
                 phone2: row.phone2 ? String(row.phone2).trim() : null,
                 props: []
@@ -113,6 +115,7 @@ async function run() {
             const g = byId.get(id);
             // keep the first non-empty landlord name (or replace if you prefer latest)
             if (!g.landlord && row.landlord) g.landlord = row.landlord;
+            if (!g.email1 && row.email1) g.email1 = String(row.email1).trim();
             if (!g.phone1 && row.phone1) g.phone1 = String(row.phone1).trim();
             if (!g.phone2 && row.phone2) g.phone2 = String(row.phone2).trim();
             }
@@ -127,12 +130,15 @@ async function run() {
         const combined = order.map((id) => {
             const g = byId.get(id);
             const row = { id, landlord: g.landlord };
+            if (g.email1) row.email_1 = g.email1;
             if (g.phone1) row.phone_1 = g.phone1;
             if (g.phone2) row.phone_2 = g.phone2;
+
             g.props.forEach((p, i) => {
-            const n = i + 1;
-            row[`link_${n}`] = p.link; // will be turned into a hyperlink with label below
+                const n = i + 1;
+                row[`link_${n}`] = p.link; // will be turned into a hyperlink with label below
             });
+
             const labels = g.props.map(p => p.name ?? "");
             return { row, labels };
         });

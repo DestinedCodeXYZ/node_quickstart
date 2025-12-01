@@ -3,7 +3,6 @@ const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const start = new Date(Date.UTC(2025, 10, 1));
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
 
@@ -19,12 +18,6 @@ async function run() {
         const bookings = database.collection('bookings');
 
         const pricing = await bookings.aggregate([
-
-            { 
-                $match: {
-                    createdAt: { $gte: start } 
-                }
-            },
 
             {
                 $lookup: {
@@ -140,7 +133,7 @@ async function run() {
             { 
                 $project: {
                     _id: 0,
-                    createdAt: {$toDate: "$createdAt"},
+                    createdAt: { $dateTrunc: { date: { $toDate: "$createdAt" }, unit: "day" } },
                     ref: "$reference",
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
@@ -157,8 +150,8 @@ async function run() {
                     landlord: "$landlord.name",
                     landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
                     landlordEmail: { $first: "$landlord.emailAddresses.email"},
-                    checkIn: {$toDate: "$checkIn"},
-                    checkOut: {$toDate: "$checkOut"},
+                    checkIn: { $dateTrunc: { date: { $toDate: "$checkIn" }, unit: "day" } },
+                    checkOut: { $dateTrunc: { date: { $toDate: "$checkOut" }, unit: "day" } },
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
                     cancellation: "$cancellation",
@@ -172,6 +165,17 @@ async function run() {
                         },
                     supply: "$enq.supply",
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
+                    sameday: { 
+                        $cond: [
+                            { $eq: [
+                                { $dateTrunc: { date: { $toDate: "$createdAt" }, unit: "day" } },
+                                { $dateTrunc: { date: { $toDate: "$checkIn" }, unit: "day" } }
+                                ] 
+                            },
+                            true,
+                            false
+                            ] 
+                        },
                     isExtension: "$extension.isExtension",
                     isDecant: "$enq.isDecant",
                     propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
@@ -202,9 +206,9 @@ async function run() {
 
 
         let worksheet;
-        let sheetName = "bookings";
+        let sheetName = "checkin";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\checkin.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

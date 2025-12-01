@@ -3,7 +3,6 @@ const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const start = new Date(Date.UTC(2025, 10, 1));
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
 
@@ -19,12 +18,6 @@ async function run() {
         const bookings = database.collection('bookings');
 
         const pricing = await bookings.aggregate([
-
-            { 
-                $match: {
-                    createdAt: { $gte: start } 
-                }
-            },
 
             {
                 $lookup: {
@@ -68,7 +61,7 @@ async function run() {
             },
 
             { $unwind: {path: "$chosenprop", preserveNullAndEmptyArrays: true} },
-
+            // Get property data for chosen properties
             { $lookup:
                 {
                     from: "properties",
@@ -136,6 +129,66 @@ async function run() {
 
             { $unwind: "$landlord" },
 
+            { 
+                $match: {
+                    "extension.isExtension" : false,
+                    "isDeleted" : false,
+                    // If pets exist, deposit & pet fee > 0, otherwise they need to = 0
+                    $expr: {
+                        $eq: [
+                        { $cond: [
+                            { $or: [
+                                // Pets
+                                { $and: [
+                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
+                                    ] },
+                                // No pets
+                                { $and: [
+                                    { $eq: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                    { $eq: [ "$pricing.costs.pet.amount", 0 ] }
+                                    ] }
+                                ]
+                            }, true, false 
+                        ]}, true
+                    ],
+                    // If vehicle exists, check for parking charge.
+                    $eq: [
+                        { $cond: [
+                            { $or: [
+                                // Cars
+                                { $and: [
+                                    { $eq: [ "$enq.request.propertyPreferences.parking.isRequired", true ] },
+                                    { $gt: [ "$pricing.costs.parking.amount", 0 ] }
+                                    ] 
+                                },
+                                
+                                // Cars but free parking
+                                { $and: [
+                                    { $eq: [ "$enq.request.propertyPreferences.parking.isRequired", true ] },
+                                    { $in: ["$prop.parkingType.value", [/(free)/] ] },
+                                    { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                    ] 
+                                },
+                                
+                                // No cars
+                                { $and: [
+                                    { $eq: [ "$enq.request.propertyPreferences.parking.isRequired", false ] },
+                                    { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                    ] 
+                                },
+                                ]
+                            }, true, false 
+                        ]}, true
+                    ],
+                    // Check if booking is insurance
+                    
+                    }
+                    
+                }   
+            },
 
             { 
                 $project: {
@@ -202,9 +255,9 @@ async function run() {
 
 
         let worksheet;
-        let sheetName = "bookings";
+        let sheetName = "bonus";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\bonustest.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

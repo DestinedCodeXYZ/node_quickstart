@@ -20,6 +20,13 @@ async function run() {
         const pricing = await bookings.aggregate([
 
             {
+                $match: {
+                    status: { $nin: ["cancelled"] },
+                    isDeleted: false
+                }
+            },
+
+            {
                 $lookup: {
                     from: "enquiries",
                     localField: "enquiry",

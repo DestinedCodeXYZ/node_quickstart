@@ -22,7 +22,9 @@ async function run() {
 
             { 
                 $match: {
-                    createdAt: { $gte: start } 
+                    createdAt: { $gte: start },
+                    status: { $nin: ["cancelled"] },
+                    isDeleted: false 
                 }
             },
 

@@ -3,6 +3,8 @@ const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
 
+const start = new Date(Date.UTC(2025, 10, 1));
+
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
 
@@ -20,7 +22,10 @@ async function run() {
         const supplier = await landlords.aggregate([
 
             {
-                $match : {"isDeleted" : false}
+                $match : {
+                    "isDeleted" : false,
+                    createdAt: { $gte: start }
+                }
             },
 
             { 

@@ -21,7 +21,6 @@ async function run() {
 
             {
                 $match: {
-                    status: { $nin: ["cancelled"] },
                     isDeleted: false
                 }
             },
@@ -145,6 +144,7 @@ async function run() {
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
+                    status: "$status",
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",

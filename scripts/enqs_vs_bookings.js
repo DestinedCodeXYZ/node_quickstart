@@ -49,7 +49,7 @@ async function run() {
 
         const enqs_vs_bookings = await enquiries.aggregate([
 
-        { $match: { isDeleted: false, status: { $nin: ["cancelled"] } } },
+
 
         // one row per offered-out chosenproperty
         {
@@ -311,6 +311,14 @@ async function run() {
                     }
                 }
             }
+        },
+
+        { 
+            $match: { 
+                isDeleted: false, 
+                status: { $nin: ["cancelled"] },
+                $expr: { $ne: [ {$first: "$addedBy.fullName"}, "Admin Master"]} 
+            } 
         },
         // output
         {

@@ -24,7 +24,7 @@ async function run() {
         {
             $match: {
                     "isDeleted" : false, 
-                    "status" : {$nin : ["cancelled"]}
+                    "status" : {$nin : ["cancelled"]},
                 }
         },
 
@@ -59,6 +59,12 @@ async function run() {
             $unwind: {
                 path: "$comp",
                 preserveNullAndEmptyArrays: true 
+            }
+        },
+
+        {
+            $match: {
+                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
             }
         },
 

@@ -45,6 +45,22 @@ async function run() {
             }
         },
 
+        {
+            $lookup: {
+                from: "agents",
+                localField: "requestBy",
+                foreignField: "_id",
+                as: "agent"
+            }
+        },
+
+        { 
+            $unwind: {
+                path: "$agent",
+                preserveNullAndEmptyArrays: true
+            } 
+        },
+
         // Join on companies
         {
             $lookup: {
@@ -74,8 +90,10 @@ async function run() {
                 createdDate: {$toDate: "$createdAt"},
                 ref: "$reference",
                 agent : "$acc.fullName",
+                requestBy: "$agent.fullName",
                 company: "$comp.name",
                 guest: "$clientName",
+                duration: {$toInt: "$availability.expectedDuration"},
                 checkIn: "$availability.checkIn",
                 checkOut: "$availability.checkOut",
                 averageAirbnbPrice: "$averageAirbnbPrice",

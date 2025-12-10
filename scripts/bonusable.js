@@ -9,7 +9,9 @@ const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongo
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
 
-const insurance = ["Romi Mitchell", "Roland Roserie", "Laila Essebane", "Jared Garfield", "Janiv Shah", "Tracy McAlister"]
+const insurance = ["Romi Mitchell", "Roland Roserie", "Laila Essebane", "Jared Garfield", "Janiv Shah", "Tracy McAlister"];
+const freeParking = ["on-site-free", "off-site-free", "street-parking-free"];
+const start = new Date(Date.UTC(2025, 10, 1));
 
 async function run() {
     try {
@@ -133,19 +135,15 @@ async function run() {
 
             { 
                 $match: {
+                    createdAt: { $gte: start },
                     "extension.isExtension" : false,
                     "isDeleted" : false,
+                    "status": { $nin: ["cancelled"] },
                     // If pets exist, deposit & pet fee > 0, otherwise they need to = 0
                     $expr: {
                         $eq: [
                         { $cond: [
                             { $or: [
-                                // Pets
-                                { $and: [
-                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
-                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
-                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
-                                    ] },
                                 // Pets but insurance
                                 { $and: [
                                     { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
@@ -153,6 +151,13 @@ async function run() {
                                     { $in: [ "$agent.fullName", insurance ] },
                                     { $gt: [ "$pricing.costs.pet.amount", 0 ] }
                                     ] },
+                                // Pets
+                                { $and: [
+                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
+                                    ] },
+                                
                                 // No pets
                                 { $and: [
                                     { $eq: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
@@ -162,13 +167,74 @@ async function run() {
                                 ]
                             }, true, false 
                         ]}, true
-                    ],
-                    // If vehicle exists, check for parking charge.
-                    
-                    }
-                    
-                }   
+                        ]
+                    },
+                }
             },
+
+            { 
+                $match: {
+                // If vehicle exists, check for parking charge. -- WORKS
+                    $expr: {
+                        $eq: [
+                        { $cond: [
+                            { $and: [     
+                                // Cars but free parking
+                                { $and: [
+                                    { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                    { $in: ["$prop.parkingType.value", freeParking ] },
+                                    { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                    ] 
+                                },
+
+                                // Cars
+                                { $and: [
+                                    { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                    { $not: [ { $in: ["$prop.parkingType.value", freeParking ] } ]  },
+                                    { $gt: [ "$pricing.costs.parking.amount", 0 ] }
+                                    ] 
+                                },
+
+                                // No cars
+                                { $and: [
+                                    { $eq: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                    { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                    ] 
+                                },
+                                ]
+                            }, true, false 
+                        ]}, true
+                    ],
+                    },
+                }
+            },
+                    
+            {
+                $match: {
+                    // Check for deposit (unless insurance) -- WORKS
+                    $expr: {
+                        $eq: [
+                        { $cond: [
+                            { $or: [
+                                // Insurance
+                                { $and: [
+                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
+                                    { $in: [ "$agent.fullName", insurance ] }
+                                    ] },
+                                
+                                // Not insurance
+                                { $and: [
+                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
+                                    { $not: [ { $in: [ "$agent.fullName", insurance ] } ] }
+                                    ] } 
+                                ]
+                            }, true, false 
+                        ]}, true
+                    ],
+                    }
+                }  
+            },
+
 
             { 
                 $project: {
@@ -178,6 +244,7 @@ async function run() {
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
+                    status: "$status",
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",

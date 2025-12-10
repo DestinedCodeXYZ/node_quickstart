@@ -133,7 +133,7 @@ async function run() {
         console.log(home)
 
         let worksheet;
-        let sheetName = "property list 2";
+        let sheetName = "property list";
         let workbook;
         let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list.xlsx';
         

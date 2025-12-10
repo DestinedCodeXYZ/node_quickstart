@@ -19,6 +19,12 @@ async function run() {
 
         const home = await properties.aggregate([
 
+            { 
+                $match: {
+                    isDeleted: false
+                }
+            },
+
             // Join landlords table to project landlord info
             {
                 $lookup : {

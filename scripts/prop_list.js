@@ -27,7 +27,13 @@ async function run() {
 
         const home = await properties.aggregate([
 
-{
+            { 
+                $match: {
+                    isDeleted: false
+                }
+            },
+
+            {
                 $lookup : {
                     from : "landlords",
                     localField : "landlordRef.0",

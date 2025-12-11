@@ -172,7 +172,7 @@ async function run() {
                 }
             },
 
-            { 
+            /*{ 
                 $match: {
                 // If vehicle exists, check for parking charge. -- WORKS
                     $expr: {
@@ -207,7 +207,7 @@ async function run() {
                     ],
                     },
                 }
-            },
+            },*/
                     
             {
                 $match: {

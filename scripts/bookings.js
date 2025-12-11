@@ -21,7 +21,6 @@ async function run() {
 
             {
                 $match: {
-                    status: { $nin: ["cancelled"] },
                     isDeleted: false
                 }
             },
@@ -145,6 +144,7 @@ async function run() {
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
+                    status: "$status",
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
@@ -181,6 +181,7 @@ async function run() {
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
                     mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",

@@ -52,11 +52,10 @@ async function run() {
 
         const enqs_vs_bookings = await enquiries.aggregate([
 
-        { $match: { isDeleted: false, status: { $nin: ["cancelled"] } } },
-
-        {
-            $match: {
-                createdAt: { $gte: start, $lt: end },
+        { 
+            $match: { 
+                isDeleted: false, status: { $nin: ["cancelled"] },
+                createdAt: { $gte: start, $lt: end }
             }
         },
         
@@ -218,6 +217,24 @@ async function run() {
             }
         },
 
+        {
+            $lookup: {
+                from: "accounts",
+                localField: "cpAll.createdBy",
+                foreignField: "_id",
+                as: "addedBy"
+            }
+        },
+
+        {
+            $lookup: {
+                from: "accounts",
+                localField: "approval.approvedBy",
+                foreignField: "_id",
+                as: "approvedBy"
+            }
+        },
+
         // BOOKING: only the booking for this enquiry whose property == selectedPropertyId (latest one)
         {
             $lookup: {
@@ -234,8 +251,19 @@ async function run() {
                 as: "bookingOne"
             }
         },
+
         { $unwind: { path: "$bookingOne", preserveNullAndEmptyArrays: true } },
 
+        {
+            $lookup: {
+                from: "landlords",
+                localField: "prop.landlordRef",
+                foreignField: "_id",
+                as: "landlord"
+            }
+        },
+
+        {$unwind: {path: "$landlord", preserveNullAndEmptyArrays: true} },
         // client for that one booking (if present)
         {
             $lookup: {
@@ -274,63 +302,107 @@ async function run() {
                 "cpAll.status": {$ne: "rejected"}
             }
         },
+
+        {
+            $addFields: {
+                cancellationPolicy: {
+                    $convert: {
+                        input: {
+                            $getField: {
+                                field: "match",
+                                input: {$regexFind: { input: "$prop.cancellationType", regex: /\d+/ }}
+                            }
+                        },
+                        to: "int",
+                        onError: null,
+                        onNull: null
+                    }
+                }
+            }
+        },
+
+        { 
+            $match: { 
+                isDeleted: false, 
+                status: { $nin: ["cancelled"] },
+                $expr: { $ne: [ {$first: "$addedBy.fullName"}, "Admin Master"]} 
+            } 
+        },
         // output
         {
             $project: {
             _id: 0,
             createdDate: "$createdAt",
-            bookedDate: "$bookingOne.createdAt",
             ref: "$reference",
-            booker: {$first: "$acc.fullName"},
+            agent: "$agent.fullName",
+            assignedTo: {$first: "$acc.fullName"},
+            addedBy: {$first: "$addedBy.fullName"},
+            approvedBy: {$first: "$approvedBy.fullName"},
             client: "$client.fullName",
+            checkIn: "$availability.checkIn",
+            checkOut: "$availability.checkOut",
+            duration: {$toInt: "$availability.expectedDuration"},
+            numOfPets: "$request.propertyPreferences.totalPets",
+            numOfParking: "$request.propertyPreferences.parking.spaces",
+            parkingType: "$prop.parkingType.value",
+            avgAirbnbPrice: "$averageAirbnbPrice",       
             enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
             homePostcode: "$address.zip",
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
-            landlordName: "$prop.landlord.name",
+            landlordName: "$landlord.name",
+            landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
+            landlordEmail: { $first: "$landlord.emailAddresses.email"},
             landlordRate: "$cpAll.costs.nightlyRate.amount",
+            cancellation: "$cancellationPolicy",
             propMargin: "$cpAll.costs.margin.amount",
             mhiyRate: {
                 $multiply: [
-                "$cpAll.costs.nightlyRate.amount",
-                { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                    "$cpAll.costs.nightlyRate.amount",
+                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
                 ]
             },
             icabRate: {
                 $round: [
-                {
-                    $multiply: [
                     {
-                        $multiply: [
-                        "$cpAll.costs.nightlyRate.amount",
-                        { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                        ]
+                        $multiply: [{
+                            $multiply: [
+                            "$cpAll.costs.nightlyRate.amount",
+                            { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                ]
+                        }, 1.15]
                     },
-                    1.15
-                    ]
-                },
-                2
-                ]
-            },
-            agent: "$agent.fullName",
-            avgAirbnbPrice: "$averageAirbnbPrice",
+                2]
+            }, 
+            
+            pet: "$cpAll.costs.petFee.amount",
+            landlordPet: "$cpAll.costs.petFee.landlordShare",
+            parking: "$cpAll.costs.parking.amount",
+            landlordParking: "$cpAll.costs.parking.landlordShare",
+            cleaning: "$cpAll.costs.cleaningFee.amount",
+            landlordCleaning: "$cpAll.costs.cleaningFee.landlordShare",
+            exitClean: "$cpAll.costs.exitClean.amount",
+            landlordExitClean: "$cpAll.costs.exitClean.landlordShare",
+            deposit: "$cpAll.costs.deposit.amount",
+            petDeposit: "$cpAll.costs.petDeposit.amount",
             supply: "$supply",
             accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             isBooking: "$isBooking",
-            isExtension: "$extension.isExtension"
+            isExtension: "$bookingOne.extension.isExtension",
+            isDecant: "$isDecant"
             }
         },
 
-        { $sort: { ref: 1, propName: 1 } }
+        { $sort: { createdAt: 1, propName: 1 } }
       
         ]).toArray();
 
         console.log(enqs_vs_bookings)
 
         let worksheet;
-        let sheetName = "oo props - oct";
+        let sheetName = "offered out properties";
         let workbook;
         let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enq_hist.xlsx';
 

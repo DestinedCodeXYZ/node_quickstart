@@ -23,7 +23,7 @@ async function run() {
             { 
                 $match: {
                     createdAt: { $gte: start },
-                    status: { $nin: ["cancelled"] },
+
                     isDeleted: false 
                 }
             },
@@ -147,6 +147,7 @@ async function run() {
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
+                    status: "$status",
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
@@ -183,6 +184,25 @@ async function run() {
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                    mhiyMarginVal: { $subtract: [
+                        { $multiply: 
+                            [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
+                        },
+                        "$pricing.info.landlordRate"
+                        ] 
+                    },
+
+                    expectedYield: { $multiply: [
+                            { $subtract: [
+                                { $multiply: 
+                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
+                                },
+                                "$pricing.info.landlordRate"
+                                ] 
+                            },
+                            {$toInt: "$expectedDuration"} 
+                        ]
+                    },
                     mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",

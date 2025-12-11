@@ -24,7 +24,7 @@ async function run() {
         {
             $match: {
                     "isDeleted" : false, 
-                    "status" : {$nin : ["cancelled"]}
+                    "status" : {$nin : ["cancelled"]},
                 }
         },
 
@@ -45,6 +45,22 @@ async function run() {
             }
         },
 
+        {
+            $lookup: {
+                from: "agents",
+                localField: "requestBy",
+                foreignField: "_id",
+                as: "agent"
+            }
+        },
+
+        { 
+            $unwind: {
+                path: "$agent",
+                preserveNullAndEmptyArrays: true
+            } 
+        },
+
         // Join on companies
         {
             $lookup: {
@@ -63,13 +79,21 @@ async function run() {
         },
 
         {
+            $match: {
+                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
+            }
+        },
+
+        {
             $project: {
                 _id: 0,
                 createdDate: {$toDate: "$createdAt"},
                 ref: "$reference",
                 agent : "$acc.fullName",
+                requestBy: "$agent.fullName",
                 company: "$comp.name",
                 guest: "$clientName",
+                duration: {$toInt: "$availability.expectedDuration"},
                 checkIn: "$availability.checkIn",
                 checkOut: "$availability.checkOut",
                 averageAirbnbPrice: "$averageAirbnbPrice",

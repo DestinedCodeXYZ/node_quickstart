@@ -19,6 +19,12 @@ async function run() {
 
         const home = await properties.aggregate([
 
+            { 
+                $match: {
+                    isDeleted: false
+                }
+            },
+
             // Join landlords table to project landlord info
             {
                 $lookup : {
@@ -109,7 +115,7 @@ async function run() {
         let worksheet;
         let sheetName = "property list 2";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_count.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

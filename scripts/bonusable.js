@@ -137,105 +137,129 @@ async function run() {
                 $match: {
                     createdAt: { $gte: start },
                     "extension.isExtension" : false,
-                    "isDeleted" : false,
-                    "status": { $nin: ["cancelled"] },
-                    // If pets exist, deposit & pet fee > 0, otherwise they need to = 0
+                    isDeleted : false,
+                    status: { $nin: ["cancelled"] },
+
+                    
+                }
+            },
+            
+            // If pets exist, deposit & pet fee > 0, otherwise they need to = 0
+            {
+                $match: {
                     $expr: {
-                        $eq: [
-                        { $cond: [
-                            { $or: [
-                                // Pets but insurance
-                                { $and: [
-                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
-                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
-                                    { $in: [ "$agent.fullName", insurance ] },
-                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
-                                    ] },
-                                // Pets
-                                { $and: [
-                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
-                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
-                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
-                                    ] },
-                                
-                                // No pets
-                                { $and: [
-                                    { $eq: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
-                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
-                                    { $eq: [ "$pricing.costs.pet.amount", 0 ] }
-                                    ] }
-                                ]
-                            }, true, false 
-                        ]}, true
+                        $gt: [
+                            { 
+                                $convert: {
+                                    input: "$expectedDuration",
+                                    to: "int",
+                                    onError: 0,
+                                    onNull: 0
+                                } 
+                            }, 6
                         ]
                     },
                 }
             },
 
-            /*{ 
+            /*{
                 $match: {
-                // If vehicle exists, check for parking charge. -- WORKS
                     $expr: {
-                        $eq: [
-                        { $cond: [
-                            { $and: [     
-                                // Cars but free parking
-                                { $and: [
-                                    { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
-                                    { $in: ["$prop.parkingType.value", freeParking ] },
-                                    { $eq: [ "$pricing.costs.parking.amount", 0 ] }
-                                    ] 
-                                },
-
-                                // Cars
-                                { $and: [
-                                    { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
-                                    { $not: [ { $in: ["$prop.parkingType.value", freeParking ] } ]  },
-                                    { $gt: [ "$pricing.costs.parking.amount", 0 ] }
-                                    ] 
-                                },
-
-                                // No cars
-                                { $and: [
-                                    { $eq: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
-                                    { $eq: [ "$pricing.costs.parking.amount", 0 ] }
-                                    ] 
-                                },
-                                ]
-                            }, true, false 
-                        ]}, true
-                    ],
-                    },
+                            $eq: [
+                            { $cond: [
+                                { $or: [
+                                    // Pets but insurance
+                                    { $and: [
+                                        { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                        { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                        { $in: [ "$agent.fullName", insurance ] },
+                                        { $gt: [ "$pricing.costs.pet.amount", 0 ] }
+                                        ] },
+                                    // Pets
+                                    { $and: [
+                                        { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                        { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                        { $gt: [ "$pricing.costs.pet.amount", 0 ] }
+                                        ] },
+                                    
+                                    // No pets
+                                    { $and: [
+                                        { $eq: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                        { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                        { $eq: [ "$pricing.costs.pet.amount", 0 ] }
+                                        ] }
+                                    ]
+                                }, true, false 
+                            ]}, true
+                            ]
+                        },
                 }
-            },*/
+            },
+            
+            {
+                $match: {
+                    // If vehicle exists, check for parking charge. -- WORKS
+                    $expr: {
+                            $eq: [
+                            { $cond: [
+                                { $and: [     
+                                    // Cars but free parking
+                                    { $and: [
+                                        { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                        { $in: ["$prop.parkingType.value", freeParking ] },
+                                        { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                        ] 
+                                    },
+
+                                    // Cars
+                                    { $and: [
+                                        { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                        { $not: [ { $in: ["$prop.parkingType.value", freeParking ] } ]  },
+                                        { $gt: [ "$pricing.costs.parking.amount", 0 ] }
+                                        ] 
+                                    },
+
+                                    // No cars
+                                    { $and: [
+                                        { $eq: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                        { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                        ] 
+                                    },
+                                    ]
+                                }, true, false 
+                            ]}, true
+                        ]
+                    }
+                }
+            },
                     
             {
                 $match: {
                     // Check for deposit (unless insurance) -- WORKS
                     $expr: {
-                        $eq: [
-                        { $cond: [
-                            { $or: [
-                                // Insurance
-                                { $and: [
-                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
-                                    { $in: [ "$agent.fullName", insurance ] }
-                                    ] },
-                                
-                                // Not insurance
-                                { $and: [
-                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
-                                    { $not: [ { $in: [ "$agent.fullName", insurance ] } ] }
-                                    ] } 
-                                ]
-                            }, true, false 
-                        ]}, true
-                    ],
-                    }
-                }  
-            },
-
-
+                            $eq: [
+                            { $cond: [
+                                { $or: [
+                                    // Insurance
+                                    { $and: [
+                                        { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
+                                        { $in: [ "$agent.fullName", insurance ] }
+                                        ] },
+                                    
+                                    // Not insurance
+                                    { $and: [
+                                        { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
+                                        { $not: [ { $in: [ "$agent.fullName", insurance ] } ] }
+                                        ] } 
+                                    ]
+                                }, true, false 
+                            ]}, true
+                        ],
+                    }       
+                }
+            },  */   
+                    
+                    
             { 
                 $project: {
                     _id: 0,
@@ -292,7 +316,84 @@ async function run() {
                     exitClean: "$pricing.costs.exitClean.amount",
                     landlordExitClean: "$pricing.costs.exitClean.landlordRate",
                     deposit: { $last: "$pricing.deposit.info.amount"},
-                    petDeposit: { $first: "$pricing.deposit.info.amount" } 
+                    petDeposit: { $first: "$pricing.deposit.info.amount" },
+                    depositBonus: { $expr: 
+                            { $cond: [
+                                { $or: [
+                                    // Insurance
+                                    { $and: [
+                                        { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
+                                        { $in: [ "$agent.fullName", insurance ] }
+                                        ] },
+                                    
+                                    // Not insurance
+                                    { $and: [
+                                        { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 1] }, 0 ] },
+                                        { $not: [ { $in: [ "$agent.fullName", insurance ] } ] }
+                                        ] } 
+                                    ]
+                                }, true, false 
+                            ]
+                        }
+                    },
+
+                    petBonus: {
+                        $cond: [
+                            { $or: [
+                                // Pets but insurance
+                                { $and: [
+                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                    { $in: [ "$agent.fullName", insurance ] },
+                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
+                                    ] },
+                                // Pets
+                                { $and: [
+                                    { $gt: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                    { $gt: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                    { $gt: [ "$pricing.costs.pet.amount", 0 ] }
+                                    ] },
+                                    
+                                // No pets
+                                { $and: [
+                                    { $eq: [ "$enq.request.propertyPreferences.totalPets", 0 ] },
+                                    { $eq: [ { $arrayElemAt: ["$pricing.deposit.info.amount", 0] }, 0 ] },
+                                    { $eq: [ "$pricing.costs.pet.amount", 0 ] }
+                                    ] }
+                                ]
+                            }, true, false 
+                        ]
+                    },
+
+                    parkingBonus: {
+                        $expr: {
+                            $cond: [
+                                { 
+                                    $or: [  // Changed from $and to $or
+                                        // Cars but free parking
+                                        { $and: [
+                                            { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                            { $in: ["$prop.parkingType.value", freeParking ] },
+                                            { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                        ]},
+                                        // Cars with paid parking
+                                        { $and: [
+                                            { $gt: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                            { $not: [ { $in: ["$prop.parkingType.value", freeParking ] } ] },
+                                            { $gt: [ "$pricing.costs.parking.amount", 0 ] }
+                                        ]},
+                                        // No cars
+                                        { $and: [
+                                            { $eq: [ { $toInt: "$enq.request.propertyPreferences.parking.spaces"}, 0 ] },
+                                            { $eq: [ "$pricing.costs.parking.amount", 0 ] }
+                                        ]}
+                                    ]
+                                }, 
+                                true, 
+                                false
+                            ]  // Added missing closing bracket
+                        }
+                    }
                 }
             }
 

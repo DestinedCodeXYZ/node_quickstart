@@ -101,9 +101,32 @@ async function run() {
                     liveExtLink: "$livePropertyLink",
                     landlordName: "$landlords.name",
                     landlordEmail: { $first: "$landlords.emailAddresses.email" },
-                    landlordPhone: { $first: "$landlords.phoneNumbers.phone"},      
+                    landlordPhone: { $first: "$landlords.phoneNumbers.phone"},    
+                    fParkTest:  {
+                        $expr: {
+                           $and: [
+                            // Regex to check for free parking in type.
+                            { $regexMatch: {
+                                input: "$parkingType.value",
+                                regex: ".*free.*",
+                                options: "i"
+                                }
+                            },
+                            
+                            // Regex to check for free parking in title
+                            { $regexMatch: {
+                                input: "$name",
+                                regex: "free.*parking",
+                                options: "i"
+                                }
+                            },
+                            
+                        ] 
+                        }
+                    }
                 }
             },
+
             { $project : {_id: 0} },
             { $sort : {postcode: 1} },
 

@@ -46,7 +46,56 @@ async function run() {
                 $project:
                 {  
                     name: "$name",
-                    createdAt: "$createdAt",
+                    createdAt: "$createdAt", 
+                    parkingTest:  {
+                        $expr: {
+                            $or: [
+                            {
+                                $and: [
+                                // Regex to check for free parking in type.
+                                    { $regexMatch: {
+                                        input: "$parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    },
+                                    
+                                    // Regex to check for free parking in title
+                                    { $regexMatch: {
+                                        input: "$name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    },
+                                ]
+                            },
+
+                            {
+                                $and: [
+                                // Regex to check for paid parking in type.
+                                    { $not: { 
+                                        $regexMatch: {
+                                        input: "$parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    }
+                                    },
+                                    
+                                    // Regex to check free parking is not in title
+                                    { $not: { 
+                                        $regexMatch: {
+                                        input: "$name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    }
+                                    },
+                                ]
+                            }
+                        ]}
+                    },
+
                     longitude: {$arrayElemAt: ["$address.position.coordinates", 0]},
                     latitude: {$arrayElemAt: ["$address.position.coordinates", 1]},
                     postcode: "$address.zip",
@@ -91,8 +140,8 @@ async function run() {
                             }
                         ]
                     },
-                    bathrooms: "$numberOfBathrooms",
                     parking: "$parkingType.value",
+                    bathrooms: "$numberOfBathrooms",
                     pets: "$petsPolicy.value",
                     garden: "$summary.outside.garden.isAvailable",
                     balcony: "$summary.outside.balcony.isAvailable",
@@ -102,28 +151,7 @@ async function run() {
                     landlordName: "$landlords.name",
                     landlordEmail: { $first: "$landlords.emailAddresses.email" },
                     landlordPhone: { $first: "$landlords.phoneNumbers.phone"},    
-                    fParkTest:  {
-                        $expr: {
-                           $and: [
-                            // Regex to check for free parking in type.
-                            { $regexMatch: {
-                                input: "$parkingType.value",
-                                regex: ".*free.*",
-                                options: "i"
-                                }
-                            },
-                            
-                            // Regex to check for free parking in title
-                            { $regexMatch: {
-                                input: "$name",
-                                regex: "free.*parking",
-                                options: "i"
-                                }
-                            },
-                            
-                        ] 
-                        }
-                    }
+                   
                 }
             },
 

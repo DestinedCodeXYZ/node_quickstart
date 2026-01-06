@@ -19,9 +19,10 @@ async function run() {
 
         const pricing = await bookings.aggregate([
 
-            { 
+            {
                 $match: {
-                    "extension.isExtension": true 
+                    isDeleted: false,
+                    "extension.isExtension": true
                 }
             },
 
@@ -34,16 +35,60 @@ async function run() {
                 }
             },
 
+            // Joining accounts to get assigned booker
             { $lookup:
                 {
                     from: "accounts",
                     localField: "enq.assigned",
                     foreignField: "_id",
-                    as: "acc"
+                    as: "assigned"
+                }
+            },
+
+            // Joining accounts to get who approved costs
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "enq.approval.approvedBy",
+                    foreignField: "_id",
+                    as: "approvedBy"
                 }
             },
 
             { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
+
+            // Joining chosenproperties for detail on who added the selected property
+            { $lookup:
+                {
+                    from: "chosenproperties",
+                    localField: "enq.selectedPropertyId",
+                    foreignField: "_id",
+                    as: "chosenprop"
+                }
+            },
+
+            { $unwind: {path: "$chosenprop", preserveNullAndEmptyArrays: true} },
+
+            { $lookup:
+                {
+                    from: "properties",
+                    localField: "chosenprop.propertyRef",
+                    foreignField: "_id",
+                    as: "prop"
+                }
+            },
+
+            { $unwind: {path: "$prop", preserveNullAndEmptyArrays: true} },
+
+            // Joins onto chosenprop to get booker info
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "chosenprop.createdBy",
+                    foreignField: "_id",
+                    as: "addedBy"
+                }
+            },
 
             // Left join on clients collection
             { $lookup: 
@@ -83,7 +128,7 @@ async function run() {
             { $lookup:
                 {
                     from: "landlords",
-                    localField: "landlord",
+                    localField: "prop.landlordRef",
                     foreignField: "_id",
                     as: "landlord"
                 }
@@ -91,21 +136,69 @@ async function run() {
 
             { $unwind: "$landlord" },
 
+            // Join table to itself for parent-child relationship
+
+            { $lookup: 
+                {
+                    from: "bookings",
+                    localField: "extension.parent",
+                    foreignField: "_id",
+                    as: "parent"
+                }
+            },
+
+            { $unwind: "$parent" },
+            
+            // Join chosenproperties onto parent, then properties onto chosenproperties to get previous property names.
+
+            { $lookup:
+                {
+                    from: "chosenproperties",
+                    localField: "parent.property",
+                    foreignField: "_id",
+                    as: "previousChosenProp"
+                }
+            },
+
+            { $unwind: "$previousChosenProp"},
+
+            { $lookup:
+                {
+                    from: "properties",
+                    localField: "previousChosenProp.propertyRef",
+                    foreignField: "_id",
+                    as: "previousProp"
+                }
+            },
+
+            { $unwind: "$previousProp"},
+
             { 
                 $project: {
                     _id: 0,
+                    createdAt: {$toDate: "$createdAt"},
                     ref: "$reference",
-                    booker: {$first: "$acc.fullName"},
+                    assignedTo: {$first: "$assigned.fullName"},
+                    addedBy: {$first: "$addedBy.fullName"},
+                    approvedBy:  {$first: "$approvedBy.fullName"},
+                    status: "$status",
                     company: "$comp.name",
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
-                    address: "$address.freeFormAddress",
                     guestPhone1: { $first: "$client.phoneNumbers.phone"},
                     guestPhone2: { $first: { $slice: ["$client.phoneNumbers.phone", 1, 1] } },
                     guestEmail1: { $first: "$client.emailAddresses.email"},
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
-                    checkIn: "$checkIn",
-                    checkOut: "$checkOut",
+                    homeAddress: "$address.freeFormAddress",
+                    bookedAddress: "$prop.address.freeFormAddress",
+                    landlord: "$landlord.name",
+                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
+                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
+                    checkIn: {$toDate: "$checkIn"},
+                    checkOut: {$toDate: "$checkOut"},
+                    duration: {$toInt: "$expectedDuration"},
+                    cancellationType: "$cancellationType",
+                    cancellation: "$cancellation",
                     avgAirbnbPrice: {  
                         $convert: {
                             input: "$enq.averageAirbnbPrice",
@@ -115,27 +208,92 @@ async function run() {
                             }
                         },
                     supply: "$enq.supply",
-                    status: "$status",
+                    accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
+                    isExtension: "$extension.isExtension",
+                    isDecant: "$enq.isDecant",
+                    propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
+                    numOfParking: "$enq.request.propertyPreferences.parking.spaces",
+                    numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
-                    mhiyMargin: "$pricing.info.mhiyCommission",
+                    mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
+                    landlordParking: "$pricing.costs.parking.landlordRate",
                     pet: "$pricing.costs.pet.amount",
+                    landlordPet: "$pricing.costs.pet.landlordRate",
                     cleaning: "$pricing.costs.cleaning.amount",
+                    landlordCleaning: "$pricing.costs.cleaning.landlordRate",
                     exitClean: "$pricing.costs.exitClean.amount",
-                    accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
-                    createdAt: 1
+                    landlordExitClean: "$pricing.costs.exitClean.landlordRate",
+                    deposit: { $last: "$pricing.deposit.info.amount"},
+                    petDeposit: { $first: "$pricing.deposit.info.amount" },
+                    propName: "$prop.name",
+                    previousPropName: "$previousProp.name",
+                    parkingType: "$prop.parkingType.value",
+                    correctParking:  {
+                        $expr: {
+                            $or: [
+                            {
+                                $and: [
+                                // Regex to check for free parking in type.
+                                    { $regexMatch: {
+                                        input: "$prop.parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    },
+                                    
+                                    // Regex to check for free parking in title
+                                    { $regexMatch: {
+                                        input: "$prop.name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    },
+                                ]
+                            },
+
+                            {
+                                $and: [
+                                // Regex to check for paid parking in type.
+                                    { $not: [
+                                        { $regexMatch: {
+                                            input: "$prop.parkingType.value",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                // Regex to check free parking is not in title
+                                    { $not: [{
+                                        $regexMatch: {
+                                            input: "$name",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                ]
+                            }
+                        ]}
+                    },
+                    sameProp: { $expr: {
+                            $cond: [{
+                                $eq: ["$prop.name", "$previousProp.name"]
+                            }, true, false]
+                        }
+                    }
                 }
             }
 
-        ]).sort({ guest: 1 }).toArray();
+        ]).sort({ createdAt: 1 }).toArray();
 
         console.log(pricing)
 
 
         let worksheet;
-        let sheetName = "extensions";
+        let sheetName = "exts";
         let workbook;
         let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking.xlsx';
 

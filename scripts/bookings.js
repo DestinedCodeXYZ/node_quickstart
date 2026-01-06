@@ -176,7 +176,6 @@ async function run() {
                     isDecant: "$enq.isDecant",
                     propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
-                    parkingType: "$prop.parkingType.value",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
@@ -193,7 +192,54 @@ async function run() {
                     exitClean: "$pricing.costs.exitClean.amount",
                     landlordExitClean: "$pricing.costs.exitClean.landlordRate",
                     deposit: { $last: "$pricing.deposit.info.amount"},
-                    petDeposit: { $first: "$pricing.deposit.info.amount" } 
+                    petDeposit: { $first: "$pricing.deposit.info.amount" },
+                    propName: "$prop.name",
+                    parkingType: "$prop.parkingType.value",
+                    correctParking:  {
+                        $expr: {
+                            $or: [
+                            {
+                                $and: [
+                                // Regex to check for free parking in type.
+                                    { $regexMatch: {
+                                        input: "$prop.parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    },
+                                    
+                                    // Regex to check for free parking in title
+                                    { $regexMatch: {
+                                        input: "$prop.name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    },
+                                ]
+                            },
+
+                            {
+                                $and: [
+                                // Regex to check for paid parking in type.
+                                    { $not: [
+                                        { $regexMatch: {
+                                            input: "$prop.parkingType.value",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                // Regex to check free parking is not in title
+                                    { $not: [{
+                                        $regexMatch: {
+                                            input: "$name",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                ]
+                            }
+                        ]}
+                    },
                 }
             }
 

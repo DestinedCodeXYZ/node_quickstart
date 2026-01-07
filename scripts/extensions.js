@@ -218,6 +218,23 @@ async function run() {
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
                     mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                    expectedYield: { $multiply: [
+                            { $subtract: [
+                                { $multiply: 
+                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
+                                },
+                                "$pricing.info.landlordRate"
+                                ] 
+                            },
+                            {$toInt: "$expectedDuration"} 
+                        ]
+                    },
+
+                    llCostDiff: { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
+                    totalDiff: { $multiply: [ 
+                        { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
+                        { $toInt: "$expectedDuration" },
+                        ] },  
                     mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",

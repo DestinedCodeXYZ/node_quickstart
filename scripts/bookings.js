@@ -54,13 +54,13 @@ async function run() {
                 }
             },
 
-            { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
+            { $unwind: {path: "$enq"} },
 
             // Joining chosenproperties for detail on who added the selected property
             { $lookup:
                 {
                     from: "chosenproperties",
-                    localField: "enq.selectedPropertyId",
+                    localField: "property",
                     foreignField: "_id",
                     as: "chosenprop"
                 }
@@ -181,6 +181,18 @@ async function run() {
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
                     mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                    expectedYield: { $multiply: [
+                            { $subtract: [
+                                { $multiply: 
+                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
+                                },
+                                "$pricing.info.landlordRate"
+                                ] 
+                            },
+                            {$toInt: "$expectedDuration"} 
+                        ]
+                    },
+
                     mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
@@ -239,7 +251,7 @@ async function run() {
                                 ]
                             }
                         ]}
-                    },
+                    }
                 }
             }
 

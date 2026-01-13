@@ -40,7 +40,7 @@ async function run() {
                     from: "accounts",
                     localField: "enq.assigned",
                     foreignField: "_id",
-                    as: "assigned"
+                    as: "enqAssigned"
                 }
             },
 
@@ -51,6 +51,33 @@ async function run() {
                     localField: "enq.approval.approvedBy",
                     foreignField: "_id",
                     as: "approvedBy"
+                }
+            },
+
+            { $addFields: 
+                {
+                    firstGCAssignedId: { $first: "$assigned" }  // or { $arrayElemAt: ["$extension.parent", 0] }
+                }
+            },
+
+            // Joining accounts to get guest care assignee
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "firstGCAssignedId",
+                    foreignField: "_id",
+                    as: "gcAssigned"
+                }
+            },
+
+            // Joining for createdBy
+
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy"
                 }
             },
 
@@ -140,8 +167,10 @@ async function run() {
                 $project: {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
+                    createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
-                    assignedTo: {$first: "$assigned.fullName"},
+                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
+                    enqAssignedTo: {$first: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",

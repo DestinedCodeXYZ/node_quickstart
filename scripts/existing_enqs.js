@@ -38,12 +38,7 @@ async function run() {
             }
         },
 
-        {
-            $unwind: {
-                path: "$acc",
-                preserveNullAndEmptyArrays: true
-            }
-        },
+
 
         {
             $lookup: {
@@ -89,7 +84,7 @@ async function run() {
                 _id: 0,
                 createdDate: {$toDate: "$createdAt"},
                 ref: "$reference",
-                agent : "$acc.fullName",
+                agent : {$first: "$acc.fullName"},
                 requestBy: "$agent.fullName",
                 company: "$comp.name",
                 guest: "$clientName",

@@ -40,7 +40,7 @@ async function run() {
                     from: "accounts",
                     localField: "enq.assigned",
                     foreignField: "_id",
-                    as: "assigned"
+                    as: "enqAssigned"
                 }
             },
 
@@ -54,13 +54,40 @@ async function run() {
                 }
             },
 
-            { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
+            { $addFields: 
+                {
+                    firstGCAssignedId: { $first: "$assigned" }  // or { $arrayElemAt: ["$extension.parent", 0] }
+                }
+            },
+
+            // Joining accounts to get guest care assignee
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "firstGCAssignedId",
+                    foreignField: "_id",
+                    as: "gcAssigned"
+                }
+            },
+
+            // Joining for createdBy
+
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy"
+                }
+            },
+
+            { $unwind: {path: "$enq"} },
 
             // Joining chosenproperties for detail on who added the selected property
             { $lookup:
                 {
                     from: "chosenproperties",
-                    localField: "enq.selectedPropertyId",
+                    localField: "property",
                     foreignField: "_id",
                     as: "chosenprop"
                 }
@@ -140,8 +167,10 @@ async function run() {
                 $project: {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
+                    createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
-                    assignedTo: {$first: "$assigned.fullName"},
+                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
+                    enqAssignedTo: {$first: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",
@@ -176,12 +205,23 @@ async function run() {
                     isDecant: "$enq.isDecant",
                     propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
-                    parkingType: "$prop.parkingType.value",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
-                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                    mhiyMarginVal: { $round: [{ $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] }, 2] },
+                    expectedYield: { $multiply: [
+                            { $subtract: [
+                                { $multiply: 
+                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
+                                },
+                                "$pricing.info.landlordRate"
+                                ] 
+                            },
+                            {$toInt: "$expectedDuration"} 
+                        ]
+                    },
+
                     mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
@@ -193,7 +233,54 @@ async function run() {
                     exitClean: "$pricing.costs.exitClean.amount",
                     landlordExitClean: "$pricing.costs.exitClean.landlordRate",
                     deposit: { $last: "$pricing.deposit.info.amount"},
-                    petDeposit: { $first: "$pricing.deposit.info.amount" } 
+                    petDeposit: { $first: "$pricing.deposit.info.amount" },
+                    propName: "$prop.name",
+                    parkingType: "$prop.parkingType.value",
+                    correctParking:  {
+                        $expr: {
+                            $or: [
+                            {
+                                $and: [
+                                // Regex to check for free parking in type.
+                                    { $regexMatch: {
+                                        input: "$prop.parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    },
+                                    
+                                    // Regex to check for free parking in title
+                                    { $regexMatch: {
+                                        input: "$prop.name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    },
+                                ]
+                            },
+
+                            {
+                                $and: [
+                                // Regex to check for paid parking in type.
+                                    { $not: [
+                                        { $regexMatch: {
+                                            input: "$prop.parkingType.value",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                // Regex to check free parking is not in title
+                                    { $not: [{
+                                        $regexMatch: {
+                                            input: "$name",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                ]
+                            }
+                        ]}
+                    }
                 }
             }
 

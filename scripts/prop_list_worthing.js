@@ -17,16 +17,13 @@ async function run() {
         const database = client.db('myhomeisyours-live');
         const properties = database.collection('properties');
 
+        const postcodeList = [
+            "BN11", "BN12", "BN13", "BN14"
+        ];
+
         const home = await properties.aggregate([
 
-            { 
-                $match: {
-                    isDeleted: false
-                }
-            },
-
-            // Join landlords table to project landlord info
-            {
+{
                 $lookup : {
                     from : "landlords",
                     localField : "landlordRef.0",
@@ -34,70 +31,38 @@ async function run() {
                     as : "landlords"
                 }
             },
-            
             { 
                 $unwind: {
                     path: "$landlords",
                     preserveNullAndEmptyArrays: true
                 }
             },
-
+            {
+                $addFields: {
+                    postcodePrefix: {
+                        $switch: {
+                            branches: postcodeList.map(prefix => ({
+                                case: { 
+                                    $regexMatch: { 
+                                        input: "$address.zip", 
+                                        regex: new RegExp(`^${prefix}\\s`, "i")  // Match prefix followed by space
+                                    } 
+                                },
+                                then: prefix
+                            })),
+                            default: null
+                        }
+                    }
+                }
+            },
+            {
+                $match: {
+                    postcodePrefix: { $ne: null } // Only include properties with matching postcodes
+                }
+            },
             {
                 $project:
-                {  
-                    name: "$name",
-                    createdAt: "$createdAt", 
-                    parkingTest:  {
-                        $expr: {
-                            $or: [
-                            {
-                                $and: [
-                                // Regex to check for free parking in type.
-                                    { $regexMatch: {
-                                        input: "$parkingType.value",
-                                        regex: ".*free.*",
-                                        options: "i"
-                                        }
-                                    },
-                                    
-                                    // Regex to check for free parking in title
-                                    { $regexMatch: {
-                                        input: "$name",
-                                        regex: "free.*parking",
-                                        options: "i"
-                                        }
-                                    },
-                                ]
-                            },
-
-                            {
-                                $and: [
-                                // Regex to check for paid parking in type.
-                                    { $not: { 
-                                        $regexMatch: {
-                                        input: "$parkingType.value",
-                                        regex: ".*free.*",
-                                        options: "i"
-                                        }
-                                    }
-                                    },
-                                    
-                                    // Regex to check free parking is not in title
-                                    { $not: { 
-                                        $regexMatch: {
-                                        input: "$name",
-                                        regex: "free.*parking",
-                                        options: "i"
-                                        }
-                                    }
-                                    },
-                                ]
-                            }
-                        ]}
-                    },
-
-                    longitude: {$arrayElemAt: ["$address.position.coordinates", 0]},
-                    latitude: {$arrayElemAt: ["$address.position.coordinates", 1]},
+                {
                     postcode: "$address.zip",
                     fullAddress: "$address.freeFormAddress",
                     bedrooms: "$numberOfBedrooms",
@@ -140,21 +105,20 @@ async function run() {
                             }
                         ]
                     },
-                    parking: "$parkingType.value",
                     bathrooms: "$numberOfBathrooms",
+                    parking: "$parkingType.value",
                     pets: "$petsPolicy.value",
                     garden: "$summary.outside.garden.isAvailable",
                     balcony: "$summary.outside.balcony.isAvailable",
                     patio: "$summary.outside.patio.isAvailable",
                     bbq: "$summary.outside.bbq.isAvailable",
+                    liveLink: {$concat: ["https://www.myhomeisyours.co.uk/public/property/" ,{$toString: "$_id"}]},
                     liveExtLink: "$livePropertyLink",
                     landlordName: "$landlords.name",
                     landlordEmail: { $first: "$landlords.emailAddresses.email" },
-                    landlordPhone: { $first: "$landlords.phoneNumbers.phone"},    
-                   
+                    landlordPhone: { $first: "$landlords.phoneNumbers.phone"},      
                 }
             },
-
             { $project : {_id: 0} },
             { $sort : {postcode: 1} },
 
@@ -164,9 +128,9 @@ async function run() {
         console.log(home)
 
         let worksheet;
-        let sheetName = "property list 2";
+        let sheetName = "property list worthing";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_count.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list_worthing.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         
@@ -193,7 +157,7 @@ async function run() {
         XLSX.writeFile(workbook, filePath);
         
                 
-        console.log(`Exported to ${filePath}.`);
+        console.log(`Exported to ${filePath}`);
     } 
     catch (err) {
         console.log(err.stack);

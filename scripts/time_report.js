@@ -38,8 +38,6 @@ async function run() {
             }
         },
 
-
-
         {
             $lookup: {
                 from: "agents",
@@ -80,32 +78,183 @@ async function run() {
         },
 
         {
+            $lookup: {
+                from: "enquiryhistories",
+                let: { enq_id: "$_id" }, // The ID of the enquiry
+                pipeline: [
+                    { 
+                    $match: { 
+                        $expr: { $eq: ["$enquiryId", "$$enq_id"] },
+                        "changes.status.new": "offeredOut" 
+                    } 
+                    },
+                    { $sort: { createdAt: 1 } }, // Earliest first
+                    { $limit: 1 }                // Only take the first one
+                ],
+                as: "earliestOffer"
+                }
+            },
+            {
+                // Turn the array of 1 item into a single object
+                $unwind: {
+                path: "$earliestOffer",
+                preserveNullAndEmptyArrays: true
+                }
+        },
+
+        {
+            $addFields: {
+                // 1. Get the absolute total in seconds
+                totalSeconds: {
+                    $dateDiff: { 
+                        startDate: "$createdAt", 
+                        endDate: "$earliestOffer.createdAt", 
+                        unit: "second" 
+                    }
+                }
+            }
+        },
+
+        {
+            $addFields: {
+                // 2. Convert to precise decimal values
+                preciseDays: { $divide: ["$totalSeconds", 86400] },   // 60*60*24
+                preciseHours: { $divide: ["$totalSeconds", 3600] },  // 60*60
+                preciseMinutes: { $divide: ["$totalSeconds", 60] }
+            }
+        },
+
+        {
+            $addFields: {
+                // 1. Only generate the day list if we actually have an end date
+                allDays: {
+                $cond: [
+                    { $and: ["$createdAt", "$earliestOffer.createdAt"] },
+                    {
+                    $map: {
+                        input: { 
+                        $range: [
+                            0, 
+                            { $add: [{ $dateDiff: { startDate: "$createdAt", endDate: "$earliestOffer.createdAt", unit: "day" } }, 1] }
+                        ] 
+                        },
+                        as: "dayOffset",
+                        in: { $dateAdd: { startDate: "$createdAt", unit: "day", amount: "$$dayOffset" } }
+                    }
+                    },
+                    [] // If no offer date, return an empty array
+                ]
+                }
+            }
+        },
+
+        {
+            $addFields: {
+                // 2. Map through the days (if the array is empty, this just returns [])
+                workMinutesPerDay: {
+                $map: {
+                    input: "$allDays",
+                    as: "currentDay",
+                    in: {
+                    $let: {
+                        vars: {
+                        dow: { $dayOfWeek: "$$currentDay" },
+                        isStartDay: { $eq: [ { $dateTrunc: { date: "$$currentDay", unit: "day" } }, { $dateTrunc: { date: "$createdAt", unit: "day" } } ] },
+                        isEndDay: { $eq: [ { $dateTrunc: { date: "$$currentDay", unit: "day" } }, { $dateTrunc: { date: "$earliestOffer.createdAt", unit: "day" } } ] }
+                        },
+                        in: {
+                        $cond: [
+                            { $or: [{ $eq: ["$$dow", 1] }, { $eq: ["$$dow", 7] }] }, 
+                            0, 
+                            {
+                            $let: {
+                                vars: {
+                                dayStart: { $cond: ["$$isStartDay", { $add: [{ $hour: "$createdAt" }, { $divide: [{ $minute: "$createdAt" }, 60] }] }, 9] },
+                                dayEnd: { $cond: ["$$isEndDay", { $add: [{ $hour: "$earliestOffer.createdAt" }, { $divide: [{ $minute: "$earliestOffer.createdAt" }, 60] }] }, 17.5] }
+                                },
+                                in: {
+                                $multiply: [
+                                    { $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] },
+                                    60
+                                ]
+                                }
+                            }
+                            }
+                        ]
+                        }
+                    }
+                    }
+                }
+                }
+            }
+        },
+
+        {
+            $addFields: {
+            totalBusinessMinutes: { $sum: "$workMinutesPerDay" }
+            }
+        },
+
+        {
+            $addFields: {
+            // Final conversion for your report
+            businessHours: { $divide: ["$totalBusinessMinutes", 60] }
+            }
+        },
+
+        {
+            $addFields: {
+            // 1. Convert our business minutes into total rounded seconds
+            totalSecs: { $round: [{ $multiply: ["$totalBusinessMinutes", 60] }, 0] }
+            }
+        },
+
+        {
+            $sort: {
+                "enqhist.createdAt": 1
+            } 
+        },
+
+        {
             $project: {
                 _id: 0,
-                createdDate: {$toDate: "$createdAt"},
+                createdAt: {$toDate: "$createdAt"},
                 ref: "$reference",
                 agent : {$first: "$acc.fullName"},
-                requestBy: "$agent.fullName",
-                company: "$comp.name",
-                guest: "$clientName",
-                duration: {$toInt: "$availability.expectedDuration"},
-                checkIn: {$toDate: "$availability.checkIn"},
-                checkOut: {$toDate: "$availability.checkOut"},
-                averageAirbnbPrice: "$averageAirbnbPrice",
+                oldStatus: "$earliestOffer.changes.status.old",
+                newStatus: "$earliestOffer.changes.status.new",
+                enqhistTimestamp: "$earliestOffer.createdAt",
                 status: "$status",
-                isExtension: "$extension.isExtension",
-                accessibility: "$request.propertyPreferences.isAccessibilityRequired",
-            } 
-        },  
+                businessDuration: {
+                    $cond: [
+                        { $gt: ["$totalSecs", 0] },
+                        {
+                        $concat: [
+                            { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } },
+                            ":",
+                            { $substrCP: [{ $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 86400] }, 3600] } } }] }, { $subtract: [{ $strLenCP: { $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 86400] }, 3600] } } }] } }, 2] }, 2] },
+                            ":",
+                            { $substrCP: [{ $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 3600] }, 60] } } }] }, { $subtract: [{ $strLenCP: { $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 3600] }, 60] } } }] } }, 2] }, 2] },
+                            ":",
+                            { $substrCP: [{ $concat: ["0", { $toString: { $mod: ["$totalSecs", 60] } }] }, { $subtract: [{ $strLenCP: { $concat: ["0", { $toString: { $mod: ["$totalSecs", 60] } }] } }, 2] }, 2] }
+                            ]
+                        },
+                        "0:00:00:00"
+                    ]
+                },
+                BusinessMins: "$totalBusinessMinutes",
+                businessHours: "$businessHours"
+            }
+        }  
                
-        ]).sort({ createdDate: 1, guest: 1 }).toArray();
+        ]).sort({ createdAt: 1 }).toArray();
 
         console.log(existing_enqs)
 
         let worksheet;
-        let sheetName = "existing enqs";
+        let sheetName = "time report";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\enq_hist.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\time_report_test.xlsx';
 
         if ( fs.existsSync(filePath) ) {
 

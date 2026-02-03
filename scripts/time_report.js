@@ -104,6 +104,24 @@ async function run() {
 
         {
             $addFields: {
+            // 1. Define your holiday list here (Ensure time is 00:00:00)
+                holidayDates: [
+                    
+                    new Date("2026-01-01"), // New Year
+                    new Date("2026-04-03"),
+                    new Date("2026-04-06"),
+                    new Date("2026-05-04"),
+                    new Date("2026-08-31"),
+                    new Date("2026-12-25"), // Christmas
+                    new Date("2026-12-28"), // Boxing Day
+                    new Date("2027-01-01"), // New Year 2027
+                    
+                ]
+            }
+        },
+
+        {
+            $addFields: {
                 // 1. Get the absolute total in seconds
                 totalSeconds: {
                     $dateDiff: { 
@@ -150,41 +168,53 @@ async function run() {
 
         {
             $addFields: {
-                // 2. Map through the days (if the array is empty, this just returns [])
                 workMinutesPerDay: {
-                $map: {
+                    $map: {
                     input: "$allDays",
                     as: "currentDay",
                     in: {
-                    $let: {
+                        $let: {
                         vars: {
-                        dow: { $dayOfWeek: "$$currentDay" },
-                        isStartDay: { $eq: [ { $dateTrunc: { date: "$$currentDay", unit: "day" } }, { $dateTrunc: { date: "$createdAt", unit: "day" } } ] },
-                        isEndDay: { $eq: [ { $dateTrunc: { date: "$$currentDay", unit: "day" } }, { $dateTrunc: { date: "$earliestOffer.createdAt", unit: "day" } } ] }
+                            currentDayTrunc: { $dateTrunc: { date: "$$currentDay", unit: "day" } },
+                            dow: { $dayOfWeek: "$$currentDay" }
                         },
                         in: {
-                        $cond: [
-                            { $or: [{ $eq: ["$$dow", 1] }, { $eq: ["$$dow", 7] }] }, 
-                            0, 
+                            $cond: [
+                            { 
+                                $or: [
+                                { $eq: ["$$dow", 1] }, // Sunday
+                                { $eq: ["$$dow", 7] }, // Saturday
+                                { $in: ["$$currentDayTrunc", "$holidayDates"] } // Matches your list
+                                ] 
+                            }, 
+                            0, // Skip these days
                             {
-                            $let: {
+                                $let: {
                                 vars: {
-                                dayStart: { $cond: ["$$isStartDay", { $add: [{ $hour: "$createdAt" }, { $divide: [{ $minute: "$createdAt" }, 60] }] }, 9] },
-                                dayEnd: { $cond: ["$$isEndDay", { $add: [{ $hour: "$earliestOffer.createdAt" }, { $divide: [{ $minute: "$earliestOffer.createdAt" }, 60] }] }, 17.5] }
+                                    isStartDay: { $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$createdAt", unit: "day" } }] },
+                                    isEndDay: { $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$earliestOffer.createdAt", unit: "day" } }] }
                                 },
                                 in: {
-                                $multiply: [
-                                    { $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] },
-                                    60
-                                ]
+                                    $let: {
+                                    vars: {
+                                        dayStart: { $cond: ["$$isStartDay", { $add: [{ $hour: "$createdAt" }, { $divide: [{ $minute: "$createdAt" }, 60] }] }, 9] },
+                                        dayEnd: { $cond: ["$$isEndDay", { $add: [{ $hour: "$earliestOffer.createdAt" }, { $divide: [{ $minute: "$earliestOffer.createdAt" }, 60] }] }, 17.5] }
+                                    },
+                                    in: {
+                                        $multiply: [
+                                        { $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] },
+                                        60
+                                        ]
+                                    }
+                                    }
+                                }
                                 }
                             }
-                            }
-                        ]
+                            ]
+                        }
                         }
                     }
                     }
-                }
                 }
             }
         },
@@ -229,21 +259,22 @@ async function run() {
                     $cond: [
                         { $gt: ["$totalSecs", 0] },
                         {
-                        $concat: [
-                            { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } },
-                            ":",
-                            { $substrCP: [{ $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 86400] }, 3600] } } }] }, { $subtract: [{ $strLenCP: { $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 86400] }, 3600] } } }] } }, 2] }, 2] },
-                            ":",
-                            { $substrCP: [{ $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 3600] }, 60] } } }] }, { $subtract: [{ $strLenCP: { $concat: ["0", { $toString: { $floor: { $divide: [{ $mod: ["$totalSecs", 3600] }, 60] } } }] } }, 2] }, 2] },
-                            ":",
-                            { $substrCP: [{ $concat: ["0", { $toString: { $mod: ["$totalSecs", 60] } }] }, { $subtract: [{ $strLenCP: { $concat: ["0", { $toString: { $mod: ["$totalSecs", 60] } }] } }, 2] }, 2] }
+                            $concat: [
+                                { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } }, // Days
+                                ":",
+                                {
+                                $dateToString: {
+                                    date: { $dateAdd: { startDate: new Date(0), unit: "second", amount: "$totalSecs" } },
+                                    format: "%H:%M:%S"
+                                }
+                                }
                             ]
                         },
                         "0:00:00:00"
                     ]
                 },
-                BusinessMins: "$totalBusinessMinutes",
-                businessHours: "$businessHours"
+                "Total Business Hours": { $round: ["$businessHours", 2] },
+                isExtension: "$extension.isExtension"
             }
         }  
                

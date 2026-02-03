@@ -90,6 +90,15 @@ async function run() {
                 }
             },
 
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy"
+                }
+            },
+
             // Left join on clients collection
             { $lookup: 
                 {
@@ -177,6 +186,7 @@ async function run() {
                 $project: {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
+                    createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
                     assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},

@@ -241,11 +241,25 @@ async function run() {
                     },
 
                     llCostDiff: { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
+                    mhiyCostDiff: { $ifNull: [ { $subtract: [
+                        { $multiply: [ "$parent.pricing.info.quoteOutPrice", "$parent.pricing.info.companyCommission" ] },
+                        { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ] }
+                                ] 
+                            }, 0 
+                        ] 
+                    },
+                    icabCostDiff: { $ifNull: [ { $subtract: [ "$parent.pricing.info.quoteOutPrice",
+                        "$pricing.info.quoteOutPrice" 
+                                ] 
+                            }, 0 
+                        ] 
+                    },
                     totalDiff: { $multiply: [ 
                         { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
                         { $toInt: "$expectedDuration" },
                         ] },  
-                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
+                    
+                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ] },
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
                     landlordParking: "$pricing.costs.parking.landlordRate",

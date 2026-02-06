@@ -41,7 +41,7 @@ async function run() {
                     from: "accounts",
                     localField: "enq.assigned",
                     foreignField: "_id",
-                    as: "assigned"
+                    as: "enqAssigned"
                 }
             },
 
@@ -52,6 +52,22 @@ async function run() {
                     localField: "enq.approval.approvedBy",
                     foreignField: "_id",
                     as: "approvedBy"
+                }
+            },
+
+            { $addFields: 
+                {
+                    firstGCAssignedId: { $first: "$assigned" }  // or { $arrayElemAt: ["$extension.parent", 0] }
+                }
+            },
+
+            // Joining accounts to get guest care assignee
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "firstGCAssignedId",
+                    foreignField: "_id",
+                    as: "gcAssigned"
                 }
             },
 
@@ -187,8 +203,9 @@ async function run() {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
                     createdBy: {$first: "$createdBy.fullName"},
+                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
                     ref: "$reference",
-                    assignedTo: {$first: "$assigned.fullName"},
+                    assignedTo: {$first: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",
@@ -254,7 +271,7 @@ async function run() {
                             }, 0 
                         ] 
                     },
-                    totalDiff: { $multiply: [ 
+                    totalLLDiff: { $multiply: [ 
                         { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
                         { $toInt: "$expectedDuration" },
                         ] },  

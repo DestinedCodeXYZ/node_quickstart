@@ -244,7 +244,7 @@ async function run() {
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
-                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", { $divide: ["$pricing.info.mhiyCommission", 100] } ] },
                     expectedYield: { $multiply: [
                             { $subtract: [
                                 { $multiply: 
@@ -258,9 +258,9 @@ async function run() {
                     },
 
                     llCostDiff: { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
-                    mhiyCostDiff: { $ifNull: [ { $subtract: [
-                        { $multiply: [ "$parent.pricing.info.quoteOutPrice", "$parent.pricing.info.companyCommission" ] },
-                        { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ] }
+                    mhiyMarginValDiff: { $ifNull: [ { $subtract: [
+                        { $multiply: ["$pricing.info.landlordRate", { $divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                        { $multiply: ["$parent.pricing.info.landlordRate", { $divide: ["$parent.pricing.info.mhiyCommission", 100] } ] }
                                 ] 
                             }, 0 
                         ] 

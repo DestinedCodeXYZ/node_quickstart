@@ -160,7 +160,11 @@ async function run() {
                 }
             },
 
-            { $unwind: "$landlord" },
+            { $unwind: {
+                path: "$landlord",
+                preserveNullAndEmptyArrays: true
+                }
+            },
 
 
             { 
@@ -185,7 +189,7 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.name",
+                    landlord: "$landlord.displayName",
                     landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
                     landlordEmail: { $first: "$landlord.emailAddresses.email"},
                     duration: {$toInt: "$expectedDuration"},

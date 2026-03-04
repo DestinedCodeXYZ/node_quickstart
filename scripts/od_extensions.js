@@ -349,38 +349,55 @@ async function run() {
 
         console.log(pricing)
 
+        const path = require('path');
+        const fs = require('fs');
+        const XLSX = require('xlsx');
 
-        let worksheet;
-        let sheetName = "exts";
+        // 1. Configuration
+        const sheetName = "exts_raw";
+        const finalPath = path.join('C:', 'Users', 'kevro', 'OneDrive - WORK', 'OneDrive', 'Documents', 'RAW_DATA.xlsx');
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
+
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking.xlsx';
 
-        if ( fs.existsSync(filePath) ) {
-
-            workbook = XLSX.readFile(filePath);
-        }
-        
-        else {
-
+        // 2. Load or Create Workbook
+        if (fs.existsSync(finalPath)) {
+            try {
+                workbook = XLSX.readFile(finalPath);
+                // Remove existing sheet to ensure a clean overwrite
+                if (workbook.SheetNames.includes(sheetName)) {
+                    delete workbook.Sheets[sheetName];
+                    workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
+                }
+            } catch (e) {
+                console.warn("Could not read existing file (it might be open). Creating new workbook.");
+                workbook = XLSX.utils.book_new();
+            }
+        } else {
             workbook = XLSX.utils.book_new();
-            console.log(`New file created at: ${filePath}.`);
         }
 
-        if ( workbook.SheetNames.includes(sheetName) ) {
-
-            delete workbook.Sheets[sheetName];
-            workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
-            console.log(`Overwriting ${sheetName} sheet in ${filePath}...`)
-
-        }
-
-        worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
+        // 3. Add Data
+        const worksheet = XLSX.utils.json_to_sheet(pricing);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-        
-        XLSX.writeFile(workbook, filePath);
 
-        
-        console.log(`Exported to ${filePath}.`);
+        // 4. Atomic Write Strategy
+        try {
+            // Write to Temp first to avoid corrupting the main file if the script crashes
+            XLSX.writeFile(workbook, tempPath);
+            
+            // Copy to OneDrive (Copy + Unlink is often safer than Rename for cloud-synced folders)
+            fs.copyFileSync(tempPath, finalPath);
+            fs.unlinkSync(tempPath);
+            
+            console.log(`Successfully exported ${pricing.length} rows to: ${finalPath}`);
+        } catch (err) {
+            if (err.code === 'EBUSY') {
+                console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");
+            } else {
+                console.error("ERROR during export:", err.message);
+            }
+        }
         
 } catch (err) {
         console.log(err.stack);

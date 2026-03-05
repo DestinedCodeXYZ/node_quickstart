@@ -114,7 +114,7 @@ async function run() {
                     bbq: "$summary.outside.bbq.isAvailable",
                     liveLink: {$concat: ["https://www.myhomeisyours.co.uk/public/property/" ,{$toString: "$_id"}]},
                     liveExtLink: "$livePropertyLink",
-                    landlordName: "$landlords.name",
+                    landlordName: "$landlords.displayName",
                     landlordEmail: { $first: "$landlords.emailAddresses.email" },
                     landlordPhone: { $first: "$landlords.phoneNumbers.phone"},      
                 }

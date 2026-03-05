@@ -1,7 +1,11 @@
+require('dotenv').config();
 // Invoking libraries
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
@@ -289,38 +293,42 @@ async function run() {
 
         console.log(pricing)
 
+        const finalPath = path.join(
+            os.homedir(),
+            process.env.ONEDRIVE_SUBFOLDER,
+            process.env.BOOKINGS_EXPORT_FILENAME
+        );
 
         let worksheet;
         let sheetName = "bookings";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking.xlsx';
 
-        if ( fs.existsSync(filePath) ) {
+        if ( fs.existsSync(finalPath) ) {
 
-            workbook = XLSX.readFile(filePath);
+            workbook = XLSX.readFile(finalPath);
         }
         
         else {
 
             workbook = XLSX.utils.book_new();
-            console.log(`New file created at: ${filePath}.`);
+            console.log(`New file created at: ${finalPath}.`);
         }
 
         if ( workbook.SheetNames.includes(sheetName) ) {
 
             delete workbook.Sheets[sheetName];
             workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
-            console.log(`Overwriting ${sheetName} sheet in ${filePath}...`)
+            console.log(`Overwriting ${sheetName} sheet in ${finalPath}...`)
 
         }
 
         worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
         
-        XLSX.writeFile(workbook, filePath);
+        XLSX.writeFile(workbook, finalPath);
 
         
-        console.log(`Exported to ${filePath}.`);
+        console.log(`Exported to ${finalPath}.`);
         
 } catch (err) {
         console.log(err.stack);

@@ -1,7 +1,10 @@
+require('dotenv').config();
 // Invoking libraries
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
@@ -293,13 +296,13 @@ async function run() {
 
         console.log(pricing)
 
-        const path = require('path');
-        const fs = require('fs');
-        const XLSX = require('xlsx');
-
         // 1. Configuration
         const sheetName = "bookings_raw";
-        const finalPath = path.join('C:', 'Users', 'kevro', 'OneDrive - WORK', 'OneDrive', 'Documents', 'RAW_DATA.xlsx');
+        const finalPath = path.join(
+                    os.homedir(),
+                    process.env.ONEDRIVE_KW,
+                    process.env.OD_RAWDATA
+                );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
 
         let workbook;

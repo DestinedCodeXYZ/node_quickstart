@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({path: path.join(__dirname, '../.env')});
 // Invoking libraries
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');

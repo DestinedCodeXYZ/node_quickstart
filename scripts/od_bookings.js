@@ -1,10 +1,11 @@
-require('dotenv').config();
 // Invoking libraries
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"

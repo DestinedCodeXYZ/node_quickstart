@@ -42,7 +42,7 @@ async function run() {
             {
                 $project: {
                     createdAt: "$createdAt",
-                    name: "$name",
+                    name: "$displayName",
                     phone1: { $first : "$phoneNumbers.phone" },
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
                     _id: { $toString: "$_id" },

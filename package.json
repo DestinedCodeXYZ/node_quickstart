@@ -11,8 +11,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dotenv": "^17.3.1",
     "exceljs": "^4.4.0",
     "mongodb": "6.17",
+    "mongoose": "^9.2.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

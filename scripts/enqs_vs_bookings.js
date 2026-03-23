@@ -324,7 +324,7 @@ async function run() {
         {
             $project: {
             _id: 0,
-            createdDate: "$createdAt",
+            createdDate: {$toDate: "$createdAt"},
             ref: "$reference",
             agent: "$agent.fullName",
             assignedTo: {$first: "$acc.fullName"},

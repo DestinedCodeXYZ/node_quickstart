@@ -1,10 +1,11 @@
-require('dotenv').config();
 // Invoking libraries
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
@@ -24,8 +25,7 @@ async function run() {
 
             {
                 $match: {
-                    isDeleted: false,
-                    "extension.isExtension": true
+                    isDeleted: false
                 }
             },
 
@@ -74,13 +74,24 @@ async function run() {
                 }
             },
 
-            { $unwind: {path: "$enq", preserveNullAndEmptyArrays: true} },
+            // Joining for createdBy
+
+            { $lookup:
+                {
+                    from: "accounts",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy"
+                }
+            },
+
+            { $unwind: {path: "$enq"} },
 
             // Joining chosenproperties for detail on who added the selected property
             { $lookup:
                 {
                     from: "chosenproperties",
-                    localField: "enq.selectedPropertyId",
+                    localField: "property",
                     foreignField: "_id",
                     as: "chosenprop"
                 }
@@ -106,15 +117,6 @@ async function run() {
                     localField: "chosenprop.createdBy",
                     foreignField: "_id",
                     as: "addedBy"
-                }
-            },
-
-            { $lookup:
-                {
-                    from: "accounts",
-                    localField: "createdBy",
-                    foreignField: "_id",
-                    as: "createdBy"
                 }
             },
 
@@ -164,51 +166,28 @@ async function run() {
 
             { $unwind: "$landlord" },
 
-            // Join table to itself for parent-child relationship
-
-            { $lookup: 
-                {
-                    from: "bookings",
-                    localField: "extension.parent",
-                    foreignField: "_id",
-                    as: "parent"
+            { $addFields:
+                { newLL:
+                    { $cond: [
+                        { $lt: [
+                            { $subtract: ["$createdAt", "$landlord.createdAt"] },
+                            1000*60*60*24*30
+                            ] 
+                        },
+                        true, false
+                    ] 
+                    }
                 }
             },
-
-            { $unwind: "$parent" },
-            
-            // Join chosenproperties onto parent, then properties onto chosenproperties to get previous property names.
-
-            { $lookup:
-                {
-                    from: "chosenproperties",
-                    localField: "parent.property",
-                    foreignField: "_id",
-                    as: "previousChosenProp"
-                }
-            },
-
-            { $unwind: "$previousChosenProp"},
-
-            { $lookup:
-                {
-                    from: "properties",
-                    localField: "previousChosenProp.propertyRef",
-                    foreignField: "_id",
-                    as: "previousProp"
-                }
-            },
-
-            { $unwind: "$previousProp"},
 
             { 
                 $project: {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
                     createdBy: {$first: "$createdBy.fullName"},
-                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
                     ref: "$reference",
-                    assignedTo: {$first: "$enqAssigned.fullName"},
+                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
+                    enqAssignedTo: {$first: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",
@@ -216,16 +195,14 @@ async function run() {
                     agent: "$agent.fullName",
                     guest: "$client.fullName",
                     guestPhone1: { $first: "$client.phoneNumbers.phone"},
-                    guestPhone2: { $first: { $slice: ["$client.phoneNumbers.phone", 1, 1] } },
                     guestEmail1: { $first: "$client.emailAddresses.email"},
-                    guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
+                    checkIn: {$toDate: "$checkIn"},
+                    checkOut: {$toDate: "$checkOut"},
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
                     landlord: "$landlord.displayName",
-                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
-                    checkIn: {$toDate: "$checkIn"},
-                    checkOut: {$toDate: "$checkOut"},
+                    landlordPhone: { $first: "$landlord.contacts.phoneNumbers.phone"},
+                    landlordEmail: { $first: "$landlord.contacts.emailAddresses.email"},
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
                     cancellation: "$cancellation",
@@ -239,15 +216,13 @@ async function run() {
                         },
                     supply: "$enq.supply",
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
-                    isExtension: "$extension.isExtension",
-                    isDecant: "$enq.isDecant",
                     propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
-                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", { $divide: ["$pricing.info.mhiyCommission", 100] } ] },
+                    mhiyMarginVal: { $round: [{ $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] }, 2] },
                     expectedYield: { $multiply: [
                             { $subtract: [
                                 { $multiply: 
@@ -259,27 +234,7 @@ async function run() {
                             {$toInt: "$expectedDuration"} 
                         ]
                     },
-
-                    llCostDiff: { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
-                    mhiyMarginValDiff: { $ifNull: [ { $subtract: [
-                        { $multiply: ["$pricing.info.landlordRate", { $divide: ["$pricing.info.mhiyCommission", 100] } ] },
-                        { $multiply: ["$parent.pricing.info.landlordRate", { $divide: ["$parent.pricing.info.mhiyCommission", 100] } ] }
-                                ] 
-                            }, 0 
-                        ] 
-                    },
-                    icabCostDiff: { $ifNull: [ { $subtract: [ "$parent.pricing.info.quoteOutPrice",
-                        "$pricing.info.quoteOutPrice" 
-                                ] 
-                            }, 0 
-                        ] 
-                    },
-                    totalLLDiff: { $multiply: [ 
-                        { $ifNull: [ { $subtract: [ "$parent.pricing.info.landlordRate", "$pricing.info.landlordRate" ] }, 0 ] },
-                        { $toInt: "$expectedDuration" },
-                        ] },  
-                    
-                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ] },
+                    mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
                     landlordParking: "$pricing.costs.parking.landlordRate",
@@ -292,7 +247,6 @@ async function run() {
                     deposit: { $last: "$pricing.deposit.info.amount"},
                     petDeposit: { $first: "$pricing.deposit.info.amount" },
                     propName: "$prop.name",
-                    previousPropName: "$previousProp.name",
                     parkingType: "$prop.parkingType.value",
                     correctParking:  {
                         $expr: {
@@ -339,12 +293,10 @@ async function run() {
                             }
                         ]}
                     },
-                    sameProp: { $expr: {
-                            $cond: [{
-                                $eq: ["$prop.name", "$previousProp.name"]
-                            }, true, false]
-                        }
-                    }
+                    isExtension: "$extension.isExtension",
+                    isExtended: "$isExtended",
+                    isDecant: "$enq.isDecant",
+                    newLL: "$newLL"
                 }
             }
 
@@ -352,38 +304,42 @@ async function run() {
 
         console.log(pricing)
 
+        const finalPath = path.join(
+            os.homedir(),
+            process.env.LOCAL,
+            process.env.TEST_EXPORT
+        );
 
         let worksheet;
-        let sheetName = "exts";
+        let sheetName = "new vs old";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\booking.xlsx';
 
-        if ( fs.existsSync(filePath) ) {
+        if ( fs.existsSync(finalPath) ) {
 
-            workbook = XLSX.readFile(filePath);
+            workbook = XLSX.readFile(finalPath);
         }
         
         else {
 
             workbook = XLSX.utils.book_new();
-            console.log(`New file created at: ${filePath}.`);
+            console.log(`New file created at: ${finalPath}.`);
         }
 
         if ( workbook.SheetNames.includes(sheetName) ) {
 
             delete workbook.Sheets[sheetName];
             workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
-            console.log(`Overwriting ${sheetName} sheet in ${filePath}...`)
+            console.log(`Overwriting ${sheetName} sheet in ${finalPath}...`)
 
         }
 
         worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
         
-        XLSX.writeFile(workbook, filePath);
+        XLSX.writeFile(workbook, finalPath);
 
         
-        console.log(`Exported to ${filePath}.`);
+        console.log(`Exported to ${finalPath}.`);
         
 } catch (err) {
         console.log(err.stack);

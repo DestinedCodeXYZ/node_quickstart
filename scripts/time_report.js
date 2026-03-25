@@ -20,6 +20,8 @@ async function run() {
 
         const existing_enqs = await enquiries.aggregate([
 
+        { $sort: { createdAt: 1 } },
+
         // Filter for deleted & cancelled enquiries
         {
             $match: {
@@ -35,6 +37,21 @@ async function run() {
                 localField: "assigned",
                 foreignField: "_id",
                 as: "acc"
+            }
+        },
+
+        {
+            $match: {
+                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
+            }
+        },
+
+        {
+            $lookup: {
+                from: "enquiryhistories",
+                localField: "_id",
+                foreignField: "enquiryId",
+                as: "allEnqHist"
             }
         },
 
@@ -72,34 +89,28 @@ async function run() {
         },
 
         {
-            $match: {
-                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
+            $addFields: {
+                earliestOffer: {
+                    $arrayElemAt: [
+                        {
+                            $filter: {
+                                input: "$allEnqHist",
+                                as: "h",
+                                cond: { $eq: ["$$h.changes.status.new", "offeredOut"] }
+                            }
+                        },
+                        0
+                    ]
+                }
             }
         },
 
         {
-            $lookup: {
-                from: "enquiryhistories",
-                let: { enq_id: "$_id" }, // The ID of the enquiry
-                pipeline: [
-                    { 
-                    $match: { 
-                        $expr: { $eq: ["$enquiryId", "$$enq_id"] },
-                        "changes.status.new": "offeredOut" 
-                    } 
-                    },
-                    { $sort: { createdAt: 1 } }, // Earliest first
-                    { $limit: 1 }                // Only take the first one
-                ],
-                as: "earliestOffer"
-                }
-            },
-            {
-                // Turn the array of 1 item into a single object
-                $unwind: {
-                path: "$earliestOffer",
-                preserveNullAndEmptyArrays: true
-                }
+            // Turn the array of 1 item into a single object
+            $unwind: {
+            path: "$earliestOffer",
+            preserveNullAndEmptyArrays: true
+            }
         },
 
         {
@@ -219,6 +230,78 @@ async function run() {
             }
         },
 
+
+
+        // 1. Join chosenproperties and SORT them by date immediately
+        {
+            $lookup: {
+                from: "chosenproperties",
+                let: { enq_id: "$_id" },
+                pipeline: [
+                    { $match: { $expr: { $eq: ["$enquiryId", "$$enq_id"] } } },
+                    { $sort: { createdAt: 1 } } // Crucial for timing
+                ],
+                as: "sortedCycles"
+            }
+        },
+
+        // 2. Map through your history to "tag" each status change with a cycle
+        {
+            $addFields: {
+                allEnqHist: {
+                    $map: {
+                        input: "$allEnqHist",
+                        as: "hist",
+                        in: {
+                            $mergeObjects: [
+                                "$$hist",
+                                {
+                                    // Find the cycle number where cycle.createdAt <= history.createdAt
+                                    attributedCycle: {
+                                        $let: {
+                                            vars: {
+                                                matchingCycles: {
+                                                    $filter: {
+                                                        input: "$sortedCycles",
+                                                        cond: { $lte: ["$$this.createdAt", "$$hist.createdAt"] }
+                                                    }
+                                                }
+                                            },
+                                            in: { $ifNull: [{ $last: "$$matchingCycles.cycle" }, 1] }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+
+        // 3. Now redefine your earliestOffer to be cycle-aware
+        {
+            $addFields: {
+                // Example: Get the "offeredOut" event specifically for the LAST cycle
+                latestCycleOffer: {
+                    $arrayElemAt: [
+                        {
+                            $filter: {
+                                input: "$allEnqHist",
+                                as: "h",
+                                cond: { 
+                                    $and: [
+                                        { $eq: ["$$h.changes.status.new", "offeredOut"] },
+                                        { $eq: ["$$h.attributedCycle", { $ifNull: [{ $last: "$sortedCycles.cycle" }, 1] }] }
+                                    ]
+                                }
+                            }
+                        },
+                        0
+                    ]
+                }
+            }
+        },
+        
         {
             $addFields: {
             totalBusinessMinutes: { $sum: "$workMinutesPerDay" }
@@ -240,9 +323,40 @@ async function run() {
         },
 
         {
-            $sort: {
-                "enqhist.createdAt": 1
-            } 
+            $addFields: {
+                durationBand: {
+                    $switch: {
+                        branches: [
+                            { 
+                                case: { $lte: ["$totalBusinessMinutes", 30] }, 
+                                then: "<30m" 
+                            },
+                            { 
+                                case: { $and: [
+                                    { $gt: ["$totalBusinessMinutes", 30] }, 
+                                    { $lte: ["$totalBusinessMinutes", 60] }
+                                ]}, 
+                                then: "30m - 1hr" 
+                            },
+                            { 
+                                case: { $and: [
+                                    { $gt: ["$totalBusinessMinutes", 60] }, 
+                                    { $lte: ["$totalBusinessMinutes", 240] } // 4 hours
+                                ]}, 
+                                then: "1 - 4hrs" 
+                            },
+                            { 
+                                case: { $and: [
+                                    { $gt: ["$totalBusinessMinutes", 240] }, 
+                                    { $lte: ["$totalBusinessMinutes", 480] } // 8 hours/1 day
+                                ]}, 
+                                then: "4 - 8hrs" 
+                            }
+                        ],
+                        default: ">8hrs"
+                    }
+                }
+            }
         },
 
         {
@@ -255,6 +369,7 @@ async function run() {
                 newStatus: "$earliestOffer.changes.status.new",
                 enqhistTimestamp: "$earliestOffer.createdAt",
                 status: "$status",
+                cycles: { $ifNull: [{ $last: "$sortedCycles.cycle" }, 0]},
                 businessDuration: {
                     $cond: [
                         { $gt: ["$totalSecs", 0] },
@@ -274,16 +389,17 @@ async function run() {
                     ]
                 },
                 "Total Business Hours": { $round: ["$businessHours", 2] },
+                durationBand: "$durationBand",
                 isExtension: "$extension.isExtension"
             }
         }  
                
-        ]).sort({ createdAt: 1 }).toArray();
+        ]).toArray();
 
         console.log(existing_enqs)
 
         let worksheet;
-        let sheetName = "time report";
+        let sheetName = "time report 2";
         let workbook;
         let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\time_report_test.xlsx';
 

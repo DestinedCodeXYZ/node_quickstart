@@ -302,9 +302,9 @@ async function run() {
         const finalPath = path.join(
                     os.homedir(),
                     process.env.ONEDRIVE_KW,
-                    process.env.OD_RAWDATA
+                    process.env.OD_DUMP
                 );
-        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 
         let workbook;
 

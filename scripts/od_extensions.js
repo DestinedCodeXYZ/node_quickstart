@@ -353,16 +353,14 @@ async function run() {
 
         console.log(pricing)
 
-        
-
         // 1. Configuration
         const sheetName = "exts_raw";
         const finalPath = path.join(
                             os.homedir(),
                             process.env.ONEDRIVE_KW,
-                            process.env.OD_RAWDATA
+                            process.env.OD_DUMP
                         );
-        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 
         let workbook;
 

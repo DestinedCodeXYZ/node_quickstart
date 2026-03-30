@@ -160,12 +160,12 @@ async function run() {
                     from: "landlords",
                     localField: "prop.landlordRef",
                     foreignField: "_id",
-                    as: "landlord"
+                    as: "landlords"
                 }
             },
 
             { $unwind: {
-                path: "$landlord",
+                path: "$landlords",
                 preserveNullAndEmptyArrays: true
                 }
             },
@@ -193,9 +193,9 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.displayName",
-                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
+                    landlord: "$landlords.displayName",
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
+                    landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
                     cancellation: "$cancellation",

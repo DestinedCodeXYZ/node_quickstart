@@ -159,11 +159,11 @@ async function run() {
                     from: "landlords",
                     localField: "prop.landlordRef",
                     foreignField: "_id",
-                    as: "landlord"
+                    as: "landlords"
                 }
             },
 
-            { $unwind: "$landlord" },
+            { $unwind: "$landlords" },
 
             // Join table to itself for parent-child relationship
 
@@ -222,9 +222,9 @@ async function run() {
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.displayName",
-                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
+                    landlord: "$landlords.displayName",
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } }, 
+                    landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     checkIn: {$toDate: "$checkIn"},
                     checkOut: {$toDate: "$checkOut"},
                     duration: {$toInt: "$expectedDuration"},

@@ -160,17 +160,17 @@ async function run() {
                     from: "landlords",
                     localField: "prop.landlordRef",
                     foreignField: "_id",
-                    as: "landlord"
+                    as: "landlords"
                 }
             },
 
-            { $unwind: "$landlord" },
+            { $unwind: "$landlords" },
 
             { $addFields:
                 { newLL:
                     { $cond: [
                         { $lt: [
-                            { $subtract: ["$createdAt", "$landlord.createdAt"] },
+                            { $subtract: ["$createdAt", "$landlords.createdAt"] },
                             1000*60*60*24*30
                             ] 
                         },
@@ -200,9 +200,9 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.displayName",
-                    landlordPhone: { $first: "$landlord.contacts.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.contacts.emailAddresses.email"},
+                    landlord: "$landlords.displayName",
+                    landlordPhone: { $first: "$landlords.contacts.phoneNumbers.phone"},
+                    landlordEmail: { $first: "$landlords.contacts.emailAddresses.email"},
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
                     cancellation: "$cancellation",
@@ -216,7 +216,7 @@ async function run() {
                         },
                     supply: "$enq.supply",
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
-                    propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
+                    propertySynced: { $cond: [{ $ifNull: ["$landlords.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
                     numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",

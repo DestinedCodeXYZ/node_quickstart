@@ -8,6 +8,7 @@ const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongo
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
+const start = new Date(Date.UTC(2026, 0, 1));
 
 // Query for all existing enquiries on db
 async function run() {
@@ -20,386 +21,260 @@ async function run() {
 
         const existing_enqs = await enquiries.aggregate([
 
-        { $sort: { createdAt: 1 } },
+            { $sort: { createdAt: 1 } },
 
-        // Filter for deleted & cancelled enquiries
-        {
-            $match: {
-                    "isDeleted" : false, 
-                    "status" : {$nin : ["cancelled"]},
+            // 1. Filter for valid enquiries
+            {
+                $match: {
+                    createdAt: {$gte: start},
+                    isDeleted: false,
+                    status: { $nin: ["cancelled"] },
                 }
-        },
+            },
 
-        // Join on accounts
-        {
-            $lookup: {
-                from: "accounts",
-                localField: "assigned",
-                foreignField: "_id",
-                as: "acc"
-            }
-        },
-
-        {
-            $match: {
-                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
-            }
-        },
-
-        {
-            $lookup: {
-                from: "enquiryhistories",
-                localField: "_id",
-                foreignField: "enquiryId",
-                as: "allEnqHist"
-            }
-        },
-
-        {
-            $lookup: {
-                from: "agents",
-                localField: "requestBy",
-                foreignField: "_id",
-                as: "agent"
-            }
-        },
-
-        { 
-            $unwind: {
-                path: "$agent",
-                preserveNullAndEmptyArrays: true
-            } 
-        },
-
-        // Join on companies
-        {
-            $lookup: {
-                from: "companies",
-                localField: "company",
-                foreignField: "_id",
-                as: "comp"
-            }
-        },
-
-        {
-            $unwind: {
-                path: "$comp",
-                preserveNullAndEmptyArrays: true 
-            }
-        },
-
-        {
-            $addFields: {
-                earliestOffer: {
-                    $arrayElemAt: [
-                        {
-                            $filter: {
-                                input: "$allEnqHist",
-                                as: "h",
-                                cond: { $eq: ["$$h.changes.status.new", "offeredOut"] }
-                            }
-                        },
-                        0
-                    ]
+            // 2. Joins: Accounts, Agents, Companies
+            {
+                $lookup: {
+                    from: "accounts",
+                    localField: "assigned",
+                    foreignField: "_id",
+                    as: "acc"
                 }
-            }
-        },
-
-        {
-            // Turn the array of 1 item into a single object
-            $unwind: {
-            path: "$earliestOffer",
-            preserveNullAndEmptyArrays: true
-            }
-        },
-
-        {
-            $addFields: {
-            // 1. Define your holiday list here (Ensure time is 00:00:00)
-                holidayDates: [
-                    
-                    new Date("2026-01-01"), // New Year
-                    new Date("2026-04-03"),
-                    new Date("2026-04-06"),
-                    new Date("2026-05-04"),
-                    new Date("2026-08-31"),
-                    new Date("2026-12-25"), // Christmas
-                    new Date("2026-12-28"), // Boxing Day
-                    new Date("2027-01-01"), // New Year 2027
-                    
-                ]
-            }
-        },
-
-        {
-            $addFields: {
-                // 1. Get the absolute total in seconds
-                totalSeconds: {
-                    $dateDiff: { 
-                        startDate: "$createdAt", 
-                        endDate: "$earliestOffer.createdAt", 
-                        unit: "second" 
-                    }
+            },
+            {
+                $match: {
+                    $expr: { $ne: ["$acc.fullName", "Admin Master"] }
                 }
-            }
-        },
-
-        {
-            $addFields: {
-                // 2. Convert to precise decimal values
-                preciseDays: { $divide: ["$totalSeconds", 86400] },   // 60*60*24
-                preciseHours: { $divide: ["$totalSeconds", 3600] },  // 60*60
-                preciseMinutes: { $divide: ["$totalSeconds", 60] }
-            }
-        },
-
-        {
-            $addFields: {
-                // 1. Only generate the day list if we actually have an end date
-                allDays: {
-                $cond: [
-                    { $and: ["$createdAt", "$earliestOffer.createdAt"] },
-                    {
-                    $map: {
-                        input: { 
-                        $range: [
-                            0, 
-                            { $add: [{ $dateDiff: { startDate: "$createdAt", endDate: "$earliestOffer.createdAt", unit: "day" } }, 1] }
-                        ] 
-                        },
-                        as: "dayOffset",
-                        in: { $dateAdd: { startDate: "$createdAt", unit: "day", amount: "$$dayOffset" } }
-                    }
-                    },
-                    [] // If no offer date, return an empty array
-                ]
+            },
+            {
+                $lookup: {
+                    from: "agents",
+                    localField: "requestBy",
+                    foreignField: "_id",
+                    as: "agent"
                 }
-            }
-        },
-
-        {
-            $addFields: {
-                workMinutesPerDay: {
-                    $map: {
-                    input: "$allDays",
-                    as: "currentDay",
-                    in: {
-                        $let: {
-                        vars: {
-                            currentDayTrunc: { $dateTrunc: { date: "$$currentDay", unit: "day" } },
-                            dow: { $dayOfWeek: "$$currentDay" }
-                        },
-                        in: {
-                            $cond: [
-                            { 
-                                $or: [
-                                { $eq: ["$$dow", 1] }, // Sunday
-                                { $eq: ["$$dow", 7] }, // Saturday
-                                { $in: ["$$currentDayTrunc", "$holidayDates"] } // Matches your list
-                                ] 
-                            }, 
-                            0, // Skip these days
-                            {
-                                $let: {
-                                vars: {
-                                    isStartDay: { $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$createdAt", unit: "day" } }] },
-                                    isEndDay: { $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$earliestOffer.createdAt", unit: "day" } }] }
-                                },
-                                in: {
-                                    $let: {
-                                    vars: {
-                                        dayStart: { $cond: ["$$isStartDay", { $add: [{ $hour: "$createdAt" }, { $divide: [{ $minute: "$createdAt" }, 60] }] }, 9] },
-                                        dayEnd: { $cond: ["$$isEndDay", { $add: [{ $hour: "$earliestOffer.createdAt" }, { $divide: [{ $minute: "$earliestOffer.createdAt" }, 60] }] }, 17.5] }
-                                    },
-                                    in: {
-                                        $multiply: [
-                                        { $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] },
-                                        60
-                                        ]
-                                    }
-                                    }
-                                }
-                                }
-                            }
-                            ]
-                        }
-                        }
-                    }
-                    }
+            },
+            {
+                $unwind: {
+                    path: "$agent",
+                    preserveNullAndEmptyArrays: true
                 }
-            }
-        },
+            },
+            {
+                $lookup: {
+                    from: "companies",
+                    localField: "company",
+                    foreignField: "_id",
+                    as: "comp"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$comp",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
 
+            // 3. Cycle and History Logic
+            {
+                $lookup: {
+                    from: "chosenproperties",
+                    let: { enq_id: "$_id" },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ["$enquiryId", "$$enq_id"] } } },
+                        { $sort: { createdAt: 1 } }
+                    ],
+                    as: "sortedCycles"
+                }
+            },
 
+            {
+                $lookup: {
+                    from: "enquiryhistories",
+                    localField: "_id",
+                    foreignField: "enquiryId",
+                    as: "allEnqHist"
+                }
+            },
 
-        // 1. Join chosenproperties and SORT them by date immediately
-        {
-            $lookup: {
-                from: "chosenproperties",
-                let: { enq_id: "$_id" },
-                pipeline: [
-                    { $match: { $expr: { $eq: ["$enquiryId", "$$enq_id"] } } },
-                    { $sort: { createdAt: 1 } } // Crucial for timing
-                ],
-                as: "sortedCycles"
-            }
-        },
-
-        // 2. Map through your history to "tag" each status change with a cycle
-        {
-            $addFields: {
-                allEnqHist: {
-                    $map: {
-                        input: "$allEnqHist",
-                        as: "hist",
-                        in: {
-                            $mergeObjects: [
-                                "$$hist",
-                                {
-                                    // Find the cycle number where cycle.createdAt <= history.createdAt
-                                    attributedCycle: {
-                                        $let: {
-                                            vars: {
-                                                matchingCycles: {
-                                                    $filter: {
-                                                        input: "$sortedCycles",
-                                                        cond: { $lte: ["$$this.createdAt", "$$hist.createdAt"] }
+            // 4. Tag History with Cycles
+            {
+                $addFields: {
+                    allEnqHist: {
+                        $map: {
+                            input: "$allEnqHist",
+                            as: "hist",
+                            in: {
+                                $mergeObjects: [
+                                    "$$hist",
+                                    {
+                                        attributedCycle: {
+                                            $let: {
+                                                vars: {
+                                                    matchingCycles: {
+                                                        $filter: {
+                                                            input: "$sortedCycles",
+                                                            cond: { $lte: ["$$this.createdAt", "$$hist.createdAt"] }
+                                                        }
                                                     }
-                                                }
-                                            },
-                                            in: { $ifNull: [{ $last: "$$matchingCycles.cycle" }, 1] }
+                                                },
+                                                in: { $ifNull: [{ $last: "$$matchingCycles.cycle" }, 0] }
+                                            }
                                         }
                                     }
-                                }
-                            ]
+                                ]
+                            }
                         }
                     }
                 }
-            }
-        },
+            },
 
-        // 3. Now redefine your earliestOffer to be cycle-aware
-        {
-            $addFields: {
-                // Example: Get the "offeredOut" event specifically for the LAST cycle
-                latestCycleOffer: {
-                    $arrayElemAt: [
-                        {
-                            $filter: {
-                                input: "$allEnqHist",
-                                as: "h",
-                                cond: { 
-                                    $and: [
-                                        { $eq: ["$$h.changes.status.new", "offeredOut"] },
-                                        { $eq: ["$$h.attributedCycle", { $ifNull: [{ $last: "$sortedCycles.cycle" }, 1] }] }
-                                    ]
+            // 5. Create a separate document for every cycle
+            { $unwind: "$sortedCycles" },
+
+            // 6. Find the 'offeredOut' history for THIS specific cycle
+            {
+                $addFields: {
+                    cycleOfferHistory: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$allEnqHist",
+                                    as: "h",
+                                    cond: {
+                                        $and: [
+                                            { $eq: ["$$h.changes.status.new", "offeredOut"] },
+                                            { $eq: ["$$h.attributedCycle", "$sortedCycles.cycle"] }
+                                        ]
+                                    }
                                 }
-                            }
-                        },
-                        0
-                    ]
-                }
-            }
-        },
-        
-        {
-            $addFields: {
-            totalBusinessMinutes: { $sum: "$workMinutesPerDay" }
-            }
-        },
-
-        {
-            $addFields: {
-            // Final conversion for your report
-            businessHours: { $divide: ["$totalBusinessMinutes", 60] }
-            }
-        },
-
-        {
-            $addFields: {
-            // 1. Convert our business minutes into total rounded seconds
-            totalSecs: { $round: [{ $multiply: ["$totalBusinessMinutes", 60] }, 0] }
-            }
-        },
-
-        {
-            $addFields: {
-                durationBand: {
-                    $switch: {
-                        branches: [
-                            { 
-                                case: { $lte: ["$totalBusinessMinutes", 30] }, 
-                                then: "<30m" 
                             },
-                            { 
-                                case: { $and: [
-                                    { $gt: ["$totalBusinessMinutes", 30] }, 
-                                    { $lte: ["$totalBusinessMinutes", 60] }
-                                ]}, 
-                                then: "30m - 1hr" 
-                            },
-                            { 
-                                case: { $and: [
-                                    { $gt: ["$totalBusinessMinutes", 60] }, 
-                                    { $lte: ["$totalBusinessMinutes", 240] } // 4 hours
-                                ]}, 
-                                then: "1 - 4hrs" 
-                            },
-                            { 
-                                case: { $and: [
-                                    { $gt: ["$totalBusinessMinutes", 240] }, 
-                                    { $lte: ["$totalBusinessMinutes", 480] } // 8 hours/1 day
-                                ]}, 
-                                then: "4 - 8hrs" 
-                            }
-                        ],
-                        default: ">8hrs"
+                            0
+                        ]
                     }
                 }
-            }
-        },
+            },
 
-        {
-            $project: {
-                _id: 0,
-                createdAt: {$toDate: "$createdAt"},
-                ref: "$reference",
-                agent : {$first: "$acc.fullName"},
-                oldStatus: "$earliestOffer.changes.status.old",
-                newStatus: "$earliestOffer.changes.status.new",
-                enqhistTimestamp: "$earliestOffer.createdAt",
-                status: "$status",
-                cycles: { $ifNull: [{ $last: "$sortedCycles.cycle" }, 0]},
-                businessDuration: {
-                    $cond: [
-                        { $gt: ["$totalSecs", 0] },
-                        {
-                            $concat: [
-                                { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } }, // Days
-                                ":",
-                                {
-                                $dateToString: {
-                                    date: { $dateAdd: { startDate: new Date(0), unit: "second", amount: "$totalSecs" } },
-                                    format: "%H:%M:%S"
-                                }
-                                }
-                            ]
-                        },
-                        "0:00:00:00"
+            // 7. Define Start and End for THIS cycle
+            {
+                $addFields: {
+                    // Start is when the cycle was created, End is when it was 'Offered Out'
+                    startTime: "$sortedCycles.createdAt",
+                    endTime: "$cycleOfferHistory.createdAt",
+                    holidayDates: [ 
+                        new Date("2026-01-01"), new Date("2026-04-03"),
+                        new Date("2026-04-06"), new Date("2026-05-04"),
+                        new Date("2026-08-31"), new Date("2026-12-25"),
+                        new Date("2026-12-28"), new Date("2027-01-01")
                     ]
-                },
-                "Total Business Hours": { $round: ["$businessHours", 2] },
-                durationBand: "$durationBand",
-                isExtension: "$extension.isExtension"
+                }
+            },
+
+            // 8. Generate range of days for THIS cycle
+            {
+                $addFields: {
+                    allDays: {
+                        $cond: [
+                            { $and: ["$startTime", "$endTime"] },
+                            {
+                                $map: {
+                                    input: { $range: [0, { $add: [{ $dateDiff: { startDate: "$startTime", endDate: "$endTime", unit: "day" } }, 1] }] },
+                                    as: "dayOffset",
+                                    in: { $dateAdd: { startDate: "$startTime", unit: "day", amount: "$$dayOffset" } }
+                                }
+                            },
+                            []
+                        ]
+                    }
+                }
+            },
+
+            // 9. Calculate Business Minutes for THIS cycle
+            {
+                $addFields: {
+                    workMinutesPerDay: {
+                        $map: {
+                            input: "$allDays",
+                            as: "currentDay",
+                            in: {
+                                $let: {
+                                    vars: {
+                                        currentDayTrunc: { $dateTrunc: { date: "$$currentDay", unit: "day" } },
+                                        dow: { $dayOfWeek: "$$currentDay" }
+                                    },
+                                    in: {
+                                        $cond: [
+                                            { $or: [{ $eq: ["$$dow", 1] }, { $eq: ["$$dow", 7] }, { $in: ["$$currentDayTrunc", "$holidayDates"] }] },
+                                            0,
+                                            {
+                                                $let: {
+                                                    vars: {
+                                                        dayStart: { $cond: [{ $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$startTime", unit: "day" } }] }, { $add: [{ $hour: "$startTime" }, { $divide: [{ $minute: "$startTime" }, 60] }] }, 9] },
+                                                        dayEnd: { $cond: [{ $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$endTime", unit: "day" } }] }, { $add: [{ $hour: "$endTime" }, { $divide: [{ $minute: "$endTime" }, 60] }] }, 17.5] }
+                                                    },
+                                                    in: { $multiply: [{ $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] }, 60] }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+
+            // 10. Final Summing and Banding per cycle
+            {
+                $addFields: {
+                    totalSecs: { $round: [{ $multiply: [{ $sum: "$workMinutesPerDay" }, 60] }, 0] },
+                    durationBand: {
+                        $switch: {
+                            branches: [
+                                { case: { $lte: [{ $sum: "$workMinutesPerDay" }, 60] }, then: "<=1hr" },
+                                { case: { $lte: [{ $sum: "$workMinutesPerDay" }, 240] }, then: "1 - 4hrs" },
+                                { case: { $lte: [{ $sum: "$workMinutesPerDay" }, 480] }, then: "4 - 8hrs" }
+                            ],
+                            default: ">8hrs"
+                        }
+                    }
+                }
+            },
+
+            // 11. The Facet
+            {
+                $facet: {
+                    "enquiryList": [
+                        {
+                            $project: {
+                                _id: 0,
+                                "Created Date": "$createdAt",
+                                "Reference": "$reference",
+                                "Cycle": "$sortedCycles.cycle",
+                                "Agent": { $first: "$acc.fullName" },
+                                "Business Duration": {
+                                    $concat: [
+                                        { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } },
+                                        ":",
+                                        { $dateToString: { date: { $dateAdd: { startDate: new Date(0), unit: "second", amount: "$totalSecs" } }, format: "%H:%M:%S" } }
+                                    ]
+                                },
+                                "Duration Band": "$durationBand"
+                            }
+                        }
+                    ],
+                    "summaryStats": [
+                        { $group: { _id: "$durationBand", "Total": { $sum: 1 } } },
+                        { $project: { _id: 0, "Duration Band": "$_id", "Total": 1 } }
+                    ]
+                }
             }
-        }  
-               
         ]).toArray();
 
-        console.log(existing_enqs)
+        // Get the data out of the facet
+        const facetedData = existing_enqs[0];
+        console.log(facetedData)
 
-        let worksheet;
-        let sheetName = "time report 2";
         let workbook;
         let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\time_report_test.xlsx';
 
@@ -414,17 +289,23 @@ async function run() {
             console.log(`New file created at: ${filePath}.`);
         }
 
-        if ( workbook.SheetNames.includes(sheetName) ) {
+        // Clean up existing sheets if they exist
+        const sheetsToCreate = [
+            { name: "Enquiry_List", data: facetedData.enquiryList },
+            { name: "Performance_Summary", data: facetedData.summaryStats }
+        ];
 
-            delete workbook.Sheets[sheetName];
-            workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
-            console.log(`Overwriting ${sheetName} sheet in ${filePath}`)
+        sheetsToCreate.forEach(item => {
+            if (workbook.SheetNames.includes(item.name)) {
+                delete workbook.Sheets[item.name];
+                workbook.SheetNames = workbook.SheetNames.filter(n => n !== item.name);
+            }
+            
+            // Convert the specific array to a worksheet
+            const ws = XLSX.utils.json_to_sheet(item.data);
+            XLSX.utils.book_append_sheet(workbook, ws, item.name);
+        });
 
-        }
-
-        worksheet = XLSX.utils.json_to_sheet(existing_enqs);
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-        
         XLSX.writeFile(workbook, filePath);
         
         console.log(`Exported to ${filePath}`);

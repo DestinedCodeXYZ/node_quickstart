@@ -255,11 +255,11 @@ async function run() {
                 from: "landlords",
                 localField: "prop.landlordRef",
                 foreignField: "_id",
-                as: "landlord"
+                as: "landlords"
             }
         },
 
-        {$unwind: {path: "$landlord", preserveNullAndEmptyArrays: true} },
+        {$unwind: {path: "$landlords", preserveNullAndEmptyArrays: true} },
         // client for that one booking (if present)
         {
             $lookup: {
@@ -348,9 +348,9 @@ async function run() {
             homePostcode: "$address.zip",
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
-            landlordName: "$landlord.name",
-            landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-            landlordEmail: { $first: "$landlord.emailAddresses.email"},
+            landlordName: "$landlords.displayName",
+            landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } }, 
+            landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
             landlordRate: "$cpAll.costs.nightlyRate.amount",
             cancellation: "$cancellationPolicy",
             propMargin: { $divide: ["$cpAll.costs.margin.amount", 100]},

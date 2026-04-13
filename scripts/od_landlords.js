@@ -43,6 +43,21 @@ async function run() {
                 }
             },
 */
+
+            { $addFields:
+                { newLL:
+                    { $cond: [
+                        { $lt: [
+                            { $subtract: ["$createdAt", "$landlords.createdAt"] },
+                            1000*60*60*24*30
+                            ] 
+                        },
+                        true, false
+                    ] 
+                    }
+                }
+            },
+
             {
                 $project: {
                     createdAt: "$createdAt",
@@ -51,6 +66,7 @@ async function run() {
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
                     email: { $first: { $first: "$contacts.emailAddresses.email" } },
                     _id: { $toString: "$_id" },
+                    newLL: "$newLL"
                 }
             },
 

@@ -29,6 +29,8 @@ async function run() {
                 }
             },
 
+            { $sort : {createdAt: 1} },
+
             // Join landlords table to project landlord info
             {
                 $lookup : {
@@ -51,54 +53,7 @@ async function run() {
                 {  
                     name: "$name",
                     createdAt: "$createdAt", 
-                    parkingTest:  {
-                        $expr: {
-                            $or: [
-                            {
-                                $and: [
-                                // Regex to check for free parking in type.
-                                    { $regexMatch: {
-                                        input: "$parkingType.value",
-                                        regex: ".*free.*",
-                                        options: "i"
-                                        }
-                                    },
-                                    
-                                    // Regex to check for free parking in title
-                                    { $regexMatch: {
-                                        input: "$name",
-                                        regex: "free.*parking",
-                                        options: "i"
-                                        }
-                                    },
-                                ]
-                            },
-
-                            {
-                                $and: [
-                                // Regex to check for paid parking in type.
-                                    { $not: { 
-                                        $regexMatch: {
-                                        input: "$parkingType.value",
-                                        regex: ".*free.*",
-                                        options: "i"
-                                        }
-                                    }
-                                    },
-                                    
-                                    // Regex to check free parking is not in title
-                                    { $not: { 
-                                        $regexMatch: {
-                                        input: "$name",
-                                        regex: "free.*parking",
-                                        options: "i"
-                                        }
-                                    }
-                                    },
-                                ]
-                            }
-                        ]}
-                    },
+                    
 
                     longitude: {$arrayElemAt: ["$address.position.coordinates", 0]},
                     latitude: {$arrayElemAt: ["$address.position.coordinates", 1]},
@@ -155,12 +110,59 @@ async function run() {
                     landlordName: "$landlords.displayName",
                     landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },    
-                   
+                    parkingFlag:  {
+                        $expr: {
+                            $or: [
+                            {
+                                $and: [
+                                // Regex to check for free parking in type.
+                                    { $regexMatch: {
+                                        input: "$parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    },
+                                    
+                                    // Regex to check for free parking in title
+                                    { $regexMatch: {
+                                        input: "$name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    },
+                                ]
+                            },
+
+                            {
+                                $and: [
+                                // Regex to check for paid parking in type.
+                                    { $not: { 
+                                        $regexMatch: {
+                                        input: "$parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    }
+                                    },
+                                    
+                                    // Regex to check free parking is not in title
+                                    { $not: { 
+                                        $regexMatch: {
+                                        input: "$name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    }
+                                    },
+                                ]
+                            }
+                        ]}
+                    },
+                    isHalfway: { $ifNull: ["$isHalfwayHouse", false]}
                 }
             },
 
-            { $project : {_id: 0} },
-            { $sort : {postcode: 1} },
+            { $project : {_id: 0} }
 
         ]).toArray();
 

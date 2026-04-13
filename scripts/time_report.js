@@ -2,7 +2,10 @@
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
+require('dotenv').config({path: path.join(__dirname, '../.env')});
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
 
@@ -26,9 +29,9 @@ async function run() {
             // 1. Filter for valid enquiries
             {
                 $match: {
-                    createdAt: {$gte: start},
                     isDeleted: false,
                     status: { $nin: ["cancelled"] },
+                    createdAt: {$gte: start}
                 }
             },
 
@@ -87,7 +90,6 @@ async function run() {
                     as: "sortedCycles"
                 }
             },
-
             {
                 $lookup: {
                     from: "enquiryhistories",
@@ -129,13 +131,10 @@ async function run() {
                 }
             },
 
-            // 5. Create a separate document for every cycle
-            { $unwind: "$sortedCycles" },
-
-            // 6. Find the 'offeredOut' history for THIS specific cycle
+            // 5. Identify the "Target" Offer (Latest Cycle)
             {
                 $addFields: {
-                    cycleOfferHistory: {
+                    earliestOffer: {
                         $arrayElemAt: [
                             {
                                 $filter: {
@@ -144,7 +143,7 @@ async function run() {
                                     cond: {
                                         $and: [
                                             { $eq: ["$$h.changes.status.new", "offeredOut"] },
-                                            { $eq: ["$$h.attributedCycle", "$sortedCycles.cycle"] }
+                                            { $eq: ["$$h.attributedCycle", { $ifNull: [{ $last: "$sortedCycles.cycle" }, 0] }] }
                                         ]
                                     }
                                 }
@@ -155,13 +154,10 @@ async function run() {
                 }
             },
 
-            // 7. Define Start and End for THIS cycle
+            // 6. Business Hour Configuration & Calculations
             {
                 $addFields: {
-                    // Start is when the cycle was created, End is when it was 'Offered Out'
-                    startTime: "$sortedCycles.createdAt",
-                    endTime: "$cycleOfferHistory.createdAt",
-                    holidayDates: [ 
+                    holidayDates: [
                         new Date("2026-01-01"), new Date("2026-04-03"),
                         new Date("2026-04-06"), new Date("2026-05-04"),
                         new Date("2026-08-31"), new Date("2026-12-25"),
@@ -169,18 +165,18 @@ async function run() {
                     ]
                 }
             },
-
-            // 8. Generate range of days for THIS cycle
             {
                 $addFields: {
                     allDays: {
                         $cond: [
-                            { $and: ["$startTime", "$endTime"] },
+                            { $and: ["$createdAt", "$earliestOffer.createdAt"] },
                             {
                                 $map: {
-                                    input: { $range: [0, { $add: [{ $dateDiff: { startDate: "$startTime", endDate: "$endTime", unit: "day" } }, 1] }] },
+                                    input: {
+                                        $range: [0, { $add: [{ $dateDiff: { startDate: "$createdAt", endDate: "$earliestOffer.createdAt", unit: "day" } }, 1] }]
+                                    },
                                     as: "dayOffset",
-                                    in: { $dateAdd: { startDate: "$startTime", unit: "day", amount: "$$dayOffset" } }
+                                    in: { $dateAdd: { startDate: "$createdAt", unit: "day", amount: "$$dayOffset" } }
                                 }
                             },
                             []
@@ -188,8 +184,6 @@ async function run() {
                     }
                 }
             },
-
-            // 9. Calculate Business Minutes for THIS cycle
             {
                 $addFields: {
                     workMinutesPerDay: {
@@ -209,10 +203,14 @@ async function run() {
                                             {
                                                 $let: {
                                                     vars: {
-                                                        dayStart: { $cond: [{ $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$startTime", unit: "day" } }] }, { $add: [{ $hour: "$startTime" }, { $divide: [{ $minute: "$startTime" }, 60] }] }, 9] },
-                                                        dayEnd: { $cond: [{ $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$endTime", unit: "day" } }] }, { $add: [{ $hour: "$endTime" }, { $divide: [{ $minute: "$endTime" }, 60] }] }, 17.5] }
+                                                        isStartDay: { $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$createdAt", unit: "day" } }] },
+                                                        isEndDay: { $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$earliestOffer.createdAt", unit: "day" } }] },
+                                                        dayStart: { $cond: [{ $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$createdAt", unit: "day" } }] }, { $add: [{ $hour: "$createdAt" }, { $divide: [{ $minute: "$createdAt" }, 60] }] }, 9] },
+                                                        dayEnd: { $cond: [{ $eq: ["$$currentDayTrunc", { $dateTrunc: { date: "$earliestOffer.createdAt", unit: "day" } }] }, { $add: [{ $hour: "$earliestOffer.createdAt" }, { $divide: [{ $minute: "$earliestOffer.createdAt" }, 60] }] }, 17.5] }
                                                     },
-                                                    in: { $multiply: [{ $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] }, 60] }
+                                                    in: {
+                                                        $multiply: [{ $max: [0, { $subtract: [{ $min: [17.5, "$$dayEnd"] }, { $max: [9, "$$dayStart"] }] }] }, 60]
+                                                    }
                                                 }
                                             }
                                         ]
@@ -224,16 +222,22 @@ async function run() {
                 }
             },
 
-            // 10. Final Summing and Banding per cycle
+            // 7. Final Totals and Banding
             {
                 $addFields: {
-                    totalSecs: { $round: [{ $multiply: [{ $sum: "$workMinutesPerDay" }, 60] }, 0] },
+                    totalBusinessMinutes: { $sum: "$workMinutesPerDay" }
+                }
+            },
+            {
+                $addFields: {
+                    totalSecs: { $round: [{ $multiply: ["$totalBusinessMinutes", 60] }, 0] },
+                    businessHours: { $divide: ["$totalBusinessMinutes", 60] },
                     durationBand: {
                         $switch: {
                             branches: [
-                                { case: { $lte: [{ $sum: "$workMinutesPerDay" }, 60] }, then: "<=1hr" },
-                                { case: { $lte: [{ $sum: "$workMinutesPerDay" }, 240] }, then: "1 - 4hrs" },
-                                { case: { $lte: [{ $sum: "$workMinutesPerDay" }, 480] }, then: "4 - 8hrs" }
+                                { case: { $lte: ["$totalBusinessMinutes", 60] }, then: "<=1hr" },
+                                { case: { $and: [{ $gt: ["$totalBusinessMinutes", 60] }, { $lte: ["$totalBusinessMinutes", 240] }] }, then: "1 - 4hrs" },
+                                { case: { $and: [{ $gt: ["$totalBusinessMinutes", 240] }, { $lte: ["$totalBusinessMinutes", 480] }] }, then: "4 - 8hrs" }
                             ],
                             default: ">8hrs"
                         }
@@ -241,16 +245,16 @@ async function run() {
                 }
             },
 
-            // 11. The Facet
+            // 8. Final Facet
             {
                 $facet: {
                     "enquiryList": [
                         {
                             $project: {
                                 _id: 0,
-                                "Created Date": "$createdAt",
+                                "Created Date" : "$createdAt",
                                 "Reference": "$reference",
-                                "Cycle": "$sortedCycles.cycle",
+                                "Latest Cycle": {$last: "$sortedCycles.cycle"},
                                 "Agent": { $first: "$acc.fullName" },
                                 "Business Duration": {
                                     $concat: [
@@ -259,7 +263,9 @@ async function run() {
                                         { $dateToString: { date: { $dateAdd: { startDate: new Date(0), unit: "second", amount: "$totalSecs" } }, format: "%H:%M:%S" } }
                                     ]
                                 },
-                                "Duration Band": "$durationBand"
+                                "Business Hours": "$businessHours",
+                                "Duration Band": "$durationBand",
+                                isExtension: "$extension.isExtension"
                             }
                         }
                     ],
@@ -275,40 +281,55 @@ async function run() {
         const facetedData = existing_enqs[0];
         console.log(facetedData)
 
+        // 1. Configuration
+        const sheetName = "time_report_raw";
+        const finalPath = path.join(
+                    os.homedir(),
+                    process.env.ONEDRIVE_KW,
+                    process.env.OD_DUMP
+                );
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
+
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\time_report_test.xlsx';
 
-        if ( fs.existsSync(filePath) ) {
-
-            workbook = XLSX.readFile(filePath);
-        }
-        
-        else {
-
-            workbook = XLSX.utils.book_new();
-            console.log(`New file created at: ${filePath}.`);
-        }
-
-        // Clean up existing sheets if they exist
-        const sheetsToCreate = [
-            { name: "Enquiry_List", data: facetedData.enquiryList },
-            { name: "Performance_Summary", data: facetedData.summaryStats }
-        ];
-
-        sheetsToCreate.forEach(item => {
-            if (workbook.SheetNames.includes(item.name)) {
-                delete workbook.Sheets[item.name];
-                workbook.SheetNames = workbook.SheetNames.filter(n => n !== item.name);
+        // 2. Load or Create Workbook
+        if (fs.existsSync(finalPath)) {
+            try {
+                workbook = XLSX.readFile(finalPath);
+                // Remove existing sheet to ensure a clean overwrite
+                if (workbook.SheetNames.includes(sheetName)) {
+                    delete workbook.Sheets[sheetName];
+                    workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
+                }
+            } catch (e) {
+                console.warn("Could not read existing file (it might be open). Creating new workbook.");
+                workbook = XLSX.utils.book_new();
             }
-            
-            // Convert the specific array to a worksheet
-            const ws = XLSX.utils.json_to_sheet(item.data);
-            XLSX.utils.book_append_sheet(workbook, ws, item.name);
-        });
+        } else {
+            workbook = XLSX.utils.book_new();
+        }
 
-        XLSX.writeFile(workbook, filePath);
-        
-        console.log(`Exported to ${filePath}`);
+        // 3. Add Data
+        const worksheet = XLSX.utils.json_to_sheet(facetedData.enquiryList);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+        // 4. Atomic Write Strategy
+        try {
+            // Write to Temp first to avoid corrupting the main file if the script crashes
+            XLSX.writeFile(workbook, tempPath);
+            
+            // Copy to OneDrive (Copy + Unlink is often safer than Rename for cloud-synced folders)
+            fs.copyFileSync(tempPath, finalPath);
+            fs.unlinkSync(tempPath);
+            
+            console.log(`Successfully exported ${facetedData.enquiryList.length} rows to: ${finalPath}`);
+        } catch (err) {
+            if (err.code === 'EBUSY') {
+                console.error("ERROR: File is locked. Please close 'RAW_DATA' in Excel and try again.");
+            } else {
+                console.error("ERROR during export:", err.message);
+            }
+        }        
 
     } catch (err) {
         console.log(err.stack);

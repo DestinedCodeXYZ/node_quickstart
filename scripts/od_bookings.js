@@ -170,7 +170,20 @@ async function run() {
                 }
             },
 
-
+            { $addFields:
+                { newLL:
+                    { $cond: [
+                        { $lt: [
+                            { $subtract: ["$createdAt", "$landlords.createdAt"] },
+                            1000*60*60*24*30
+                            ] 
+                        },
+                        true, false
+                    ] 
+                    }
+                }
+            },
+            
             { 
                 $project: {
                     _id: 0,
@@ -289,7 +302,8 @@ async function run() {
                                 ]
                             }
                         ]}
-                    }
+                    },
+                    newLL: "$newLL"
                 }
             }
 

@@ -18,7 +18,7 @@ async function run() {
         const properties = database.collection('properties');
 
         const postcodeList = [
-            "EN1", "EN2", "EN3", "EN4", "EN5", "EN6", "EN7", "EN8", "EN9", "EN10", "EN11"
+            "DT3", "DT4"
         ];
 
         const home = await properties.aggregate([
@@ -128,9 +128,9 @@ async function run() {
         console.log(home)
 
         let worksheet;
-        let sheetName = "property list enfield";
+        let sheetName = "property list weymouth";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list_enfield.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list_weymouth.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

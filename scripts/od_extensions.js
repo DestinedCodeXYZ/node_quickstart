@@ -2,6 +2,10 @@
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
@@ -155,11 +159,11 @@ async function run() {
                     from: "landlords",
                     localField: "prop.landlordRef",
                     foreignField: "_id",
-                    as: "landlord"
+                    as: "landlords"
                 }
             },
 
-            { $unwind: "$landlord" },
+            { $unwind: "$landlords" },
 
             // Join table to itself for parent-child relationship
 
@@ -218,9 +222,9 @@ async function run() {
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.name",
-                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
+                    landlord: "$landlords.displayName",
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } }, 
+                    landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     checkIn: {$toDate: "$checkIn"},
                     checkOut: {$toDate: "$checkOut"},
                     duration: {$toInt: "$expectedDuration"},
@@ -349,14 +353,14 @@ async function run() {
 
         console.log(pricing)
 
-        const path = require('path');
-        const fs = require('fs');
-        const XLSX = require('xlsx');
-
         // 1. Configuration
         const sheetName = "exts_raw";
-        const finalPath = path.join('C:', 'Users', 'kevro', 'OneDrive - WORK', 'OneDrive', 'Documents', 'RAW_DATA.xlsx');
-        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
+        const finalPath = path.join(
+                            os.homedir(),
+                            process.env.ONEDRIVE_KW,
+                            process.env.OD_DUMP
+                        );
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 
         let workbook;
 

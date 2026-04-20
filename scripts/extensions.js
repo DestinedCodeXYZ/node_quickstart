@@ -221,7 +221,7 @@ async function run() {
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.name",
+                    landlord: "$landlord.displayName",
                     landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
                     landlordEmail: { $first: "$landlord.emailAddresses.email"},
                     checkIn: {$toDate: "$checkIn"},

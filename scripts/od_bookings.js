@@ -160,17 +160,30 @@ async function run() {
                     from: "landlords",
                     localField: "prop.landlordRef",
                     foreignField: "_id",
-                    as: "landlord"
+                    as: "landlords"
                 }
             },
 
             { $unwind: {
-                path: "$landlord",
+                path: "$landlords",
                 preserveNullAndEmptyArrays: true
                 }
             },
 
-
+            { $addFields:
+                { newLL:
+                    { $cond: [
+                        { $lt: [
+                            { $subtract: ["$createdAt", "$landlords.createdAt"] },
+                            1000*60*60*24*30
+                            ] 
+                        },
+                        true, false
+                    ] 
+                    }
+                }
+            },
+            
             { 
                 $project: {
                     _id: 0,
@@ -193,9 +206,9 @@ async function run() {
                     checkOut: {$toDate: "$checkOut"},
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.displayName",
-                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
+                    landlord: "$landlords.displayName",
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
+                    landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
                     cancellation: "$cancellation",
@@ -289,7 +302,8 @@ async function run() {
                                 ]
                             }
                         ]}
-                    }
+                    },
+                    newLL: "$newLL"
                 }
             }
 
@@ -302,9 +316,9 @@ async function run() {
         const finalPath = path.join(
                     os.homedir(),
                     process.env.ONEDRIVE_KW,
-                    process.env.OD_RAWDATA
+                    process.env.OD_DUMP
                 );
-        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 
         let workbook;
 

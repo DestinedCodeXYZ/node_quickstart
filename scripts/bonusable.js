@@ -2,6 +2,10 @@
 const { MongoClient } = require('mongodb');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
 const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
@@ -10,7 +14,7 @@ const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongo
 const client  = new MongoClient(url);
 
 const insurance = ["Romi Mitchell", "Roland Roserie", "Laila Essebane", "Jared Garfield ", "Janiv Shah", "Tracy McAlister"];
-const start = new Date(Date.UTC(2025, 10, 1));
+const start = new Date(Date.UTC(2026, 0, 1));
 
 async function run() {
     try {
@@ -138,28 +142,41 @@ async function run() {
                     "extension.isExtension" : false,
                     isDeleted : false,
                     status: { $nin: ["cancelled"] },
-
-                    
                 }
             },
             
-        
+            // Duration bonus check -- WORKS
             {
-                $match: {
-                    $expr: {
-                        $gt: [
+                $addFields: {
+                    durationBonus: {
+                        $cond: [
+                            { $gte: [
                             { 
-                                $convert: {
-                                    input: "$expectedDuration",
-                                    to: "int",
-                                    onError: 0,
-                                    onNull: 0
-                                } 
-                            }, 6
+                                    $convert: {
+                                        input: "$expectedDuration",
+                                        to: "int",
+                                        onError: 0,
+                                        onNull: 0
+                                    } 
+                                }, 7
+                            ]}, true, false
                         ]
-                    },
+                    }
                 }
             },
+            // Margin bonus check -- WORKS
+            {
+                $addFields: {
+                    marginBonus: {
+                        $cond: [
+                            { $gte: [ "$pricing.info.mhiyCommission", 15] },
+                            true,
+                            false
+                        ]
+                    }
+                }
+            },
+
             // Deposit bonus check -- WORKS
             {
                 $addFields: {
@@ -276,7 +293,9 @@ async function run() {
                         $and: [
                             { $eq: ["$depositBonus", true] },
                             { $eq: ["$parkingBonus", true] },
-                            { $eq: ["$petBonus", true] }
+                            { $eq: ["$petBonus", true] },
+                            { $eq: ["$marginBonus", true] },
+                            { $eq: ["$durationBonus", true] }
                         ]
                     }
                 } 
@@ -287,7 +306,6 @@ async function run() {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
                     ref: "$reference",
-                    assignedTo: {$first: "$assigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",
@@ -298,13 +316,13 @@ async function run() {
                     guestPhone2: { $first: { $slice: ["$client.phoneNumbers.phone", 1, 1] } },
                     guestEmail1: { $first: "$client.emailAddresses.email"},
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
-                    homeAddress: "$address.freeFormAddress",
-                    bookedAddress: "$prop.address.freeFormAddress",
-                    landlord: "$landlord.name",
-                    landlordPhone: { $first: "$landlord.phoneNumbers.phone"},
-                    landlordEmail: { $first: "$landlord.emailAddresses.email"},
                     checkIn: {$toDate: "$checkIn"},
                     checkOut: {$toDate: "$checkOut"},
+                    homeAddress: "$address.freeFormAddress",
+                    bookedAddress: "$prop.address.freeFormAddress",
+                    landlord: "$landlords.displayName",
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
+                    landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     duration: {$toInt: "$expectedDuration"},
                     cancellationType: "$cancellationType",
                     cancellation: "$cancellation",
@@ -319,16 +337,23 @@ async function run() {
                     supply: "$enq.supply",
                     accessibility: "$enq.request.propertyPreferences.isAccessibilityRequired",
                     isExtension: "$extension.isExtension",
+                    isExtended: "$isExtended",
                     isDecant: "$enq.isDecant",
                     propertySynced: { $cond: [{ $ifNull: ["$landlord.name", false] }, true, false ] },
                     numOfParking: "$enq.request.propertyPreferences.parking.spaces",
-                    parkingType: "$prop.parkingType.value",
-                    numOfPets: { $ifNull: ["$enq.request.propertyPreferences.totalPets", 
-                        { $arrayElemAt: ["$enq.request.propertyPreferences.pets", 0] }, 0]
-                    },
+                    numOfPets: "$enq.request.propertyPreferences.totalPets",
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
+                    mhiyMarginVal: { $round: [{ $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] }, 2] },
+                    expectedYield: { $multiply: [
+                                { $multiply: 
+                                    [ "$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] }  ],  
+                                },
+                            {$toInt: "$expectedDuration"} 
+                        ]
+                    },
+
                     mhiyPrice:  { $multiply: [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ]},
                     companyCommission: "$pricing.info.companyCommission",
                     parking: "$pricing.costs.parking.amount",
@@ -341,9 +366,59 @@ async function run() {
                     landlordExitClean: "$pricing.costs.exitClean.landlordRate",
                     deposit: { $last: "$pricing.deposit.info.amount"},
                     petDeposit: { $first: "$pricing.deposit.info.amount" },
+                    propName: "$prop.name",
+                    parkingType: "$prop.parkingType.value",
+                    correctParking:  {
+                        $expr: {
+                            $or: [
+                            {
+                                $and: [
+                                // Regex to check for free parking in type.
+                                    { $regexMatch: {
+                                        input: "$prop.parkingType.value",
+                                        regex: ".*free.*",
+                                        options: "i"
+                                        }
+                                    },
+                                    
+                                    // Regex to check for free parking in title
+                                    { $regexMatch: {
+                                        input: "$prop.name",
+                                        regex: "free.*parking",
+                                        options: "i"
+                                        }
+                                    },
+                                ]
+                            },
+
+                            {
+                                $and: [
+                                // Regex to check for paid parking in type.
+                                    { $not: [
+                                        { $regexMatch: {
+                                            input: "$prop.parkingType.value",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                // Regex to check free parking is not in title
+                                    { $not: [{
+                                        $regexMatch: {
+                                            input: "$name",
+                                            regex: ".*free.*",
+                                            options: "i"
+                                        }}]
+                                    },
+                                ]
+                            }
+                        ]}
+                    },
+                    newLL: "$newLL",
                     depositBonus: "$depositBonus",
-                    petBonus: "$petBonus",
                     parkingBonus: "$parkingBonus",
+                    petBonus: "$petBonus",
+                    marginBonus: "$marginBonus",
+                    durationBonus: "$durationBonus",
                     isBonusable: "$isBonusable"
                 }
             }
@@ -353,37 +428,55 @@ async function run() {
         console.log(pricing)
 
 
-        let worksheet;
-        let sheetName = "bonus";
+        // 1. Configuration
+        const sheetName = "bonus_raw";
+        const finalPath = path.join(
+                    os.homedir(),
+                    process.env.LOCAL,
+                    process.env.BONUS_TEST
+                );
+        const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsx');
+
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\bonustest.xlsx';
 
-        if ( fs.existsSync(filePath) ) {
-
-            workbook = XLSX.readFile(filePath);
-        }
-        
-        else {
-
+        // 2. Load or Create Workbook
+        if (fs.existsSync(finalPath)) {
+            try {
+                workbook = XLSX.readFile(finalPath);
+                // Remove existing sheet to ensure a clean overwrite
+                if (workbook.SheetNames.includes(sheetName)) {
+                    delete workbook.Sheets[sheetName];
+                    workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
+                }
+            } catch (e) {
+                console.warn("Could not read existing file (it might be open). Creating new workbook.");
+                workbook = XLSX.utils.book_new();
+            }
+        } else {
             workbook = XLSX.utils.book_new();
-            console.log(`New file created at: ${filePath}.`);
         }
 
-        if ( workbook.SheetNames.includes(sheetName) ) {
-
-            delete workbook.Sheets[sheetName];
-            workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
-            console.log(`Overwriting ${sheetName} sheet in ${filePath}...`)
-
-        }
-
-        worksheet = XLSX.utils.json_to_sheet( pricing, {cellDates : true} );
+        // 3. Add Data
+        const worksheet = XLSX.utils.json_to_sheet(pricing);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-        
-        XLSX.writeFile(workbook, filePath);
 
-        
-        console.log(`Exported to ${filePath}.`);
+        // 4. Atomic Write Strategy
+        try {
+            // Write to Temp first to avoid corrupting the main file if the script crashes
+            XLSX.writeFile(workbook, tempPath);
+            
+            // Copy to OneDrive (Copy + Unlink is often safer than Rename for cloud-synced folders)
+            fs.copyFileSync(tempPath, finalPath);
+            fs.unlinkSync(tempPath);
+            
+            console.log(`Successfully exported ${pricing.length} rows to: ${finalPath}`);
+        } catch (err) {
+            if (err.code === 'EBUSY') {
+                console.error("ERROR: File is locked. Please close 'bonustest' in Excel and try again.");
+            } else {
+                console.error("ERROR during export:", err.message);
+            }
+        }        
         
 } catch (err) {
         console.log(err.stack);

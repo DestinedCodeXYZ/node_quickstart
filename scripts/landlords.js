@@ -43,8 +43,9 @@ async function run() {
                 $project: {
                     createdAt: "$createdAt",
                     name: "$displayName",
-                    phone1: { $first : "$phoneNumbers.phone" },
-                    phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
+                    phone1: { $first : { $first: "$contacts.phoneNumbers.phone" } },
+                    phone2: { $ifNull: [ { $arrayElemAt: ["$contacts.phoneNumbers.phone", 1] } , "N/A" ]},
+                    email: { $first: { $first: "$contacts.emailAddresses.email" } },
                     _id: { $toString: "$_id" },
                 }
             },
@@ -61,7 +62,7 @@ async function run() {
         let worksheet;
         let sheetName = "landlords";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\\Excel Files\\property_count.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_count.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

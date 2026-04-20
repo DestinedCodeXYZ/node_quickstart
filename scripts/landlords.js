@@ -62,7 +62,7 @@ async function run() {
         let worksheet;
         let sheetName = "landlords";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\\Excel Files\\property_count.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_count.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

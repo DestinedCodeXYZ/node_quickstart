@@ -18,8 +18,9 @@ async function run() {
         const properties = database.collection('properties');
 
         const postcodeList = [
-            "EN1", "EN2", "EN3", "EN4", "EN5", "EN6", "EN7", "EN8", "EN9", "EN10", "EN11"
-        ];
+            "EN1", "EN2", "EN3", "EN4", "EN5", "EN6", "EN7", "EN8", "EN9", "EN10", "EN11",
+            "N9", "N21", "N18"
+                ];
 
         const home = await properties.aggregate([
 
@@ -115,8 +116,8 @@ async function run() {
                     liveLink: {$concat: ["https://www.myhomeisyours.co.uk/public/property/" ,{$toString: "$_id"}]},
                     liveExtLink: "$livePropertyLink",
                     landlordName: "$landlords.displayName",
-                    landlordEmail: { $first: "$landlords.emailAddresses.email" },
-                    landlordPhone: { $first: "$landlords.phoneNumbers.phone"},      
+                    landlordEmail: { $first: {$first: "$landlords.contacts.emailAddresses.email"} },
+                    landlordPhone: { $first: {$first: "$landlords.contacts.phoneNumbers.phone"}},      
                 }
             },
             { $project : {_id: 0} },

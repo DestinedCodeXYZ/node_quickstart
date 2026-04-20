@@ -254,6 +254,8 @@ async function run() {
                                 _id: 0,
                                 "Created Date" : "$createdAt",
                                 "Reference": "$reference",
+                                "Company" : "$comp.name",
+                                "Status" : "$status",
                                 "Latest Cycle": {$last: "$sortedCycles.cycle"},
                                 "Agent": { $first: "$acc.fullName" },
                                 "Business Duration": {

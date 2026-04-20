@@ -4,6 +4,7 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { performServerHandshake } = require('http2');
 
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
@@ -44,6 +45,16 @@ async function run() {
             },
 */
 
+            {
+                $lookup: {
+                    from: "accounts",
+                    localField: "checklist.createdBy",
+                    foreignField: "_id",
+                    as: "verifier"
+                }
+            },
+
+
             { $addFields:
                 { newLL:
                     { $cond: [
@@ -65,6 +76,16 @@ async function run() {
                     phone1: { $first : { $first: "$contacts.phoneNumbers.phone" } },
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
                     email: { $first: { $first: "$contacts.emailAddresses.email" } },
+                    "Company Name" : "$company.name",
+                    "Company URL" : "$company.url",
+                    "Size" : "$size",
+                    "Ownership" : "$ownership",
+                    "Traffic light system" : "$trafficLightSystem",
+                    "No of Listings on Orbit" : "$numberOfListings",
+                    "No of Bookings" : {$ifNull: ["$historicalBookings", 0]},
+                    "Is Verified" : {$ifNull: [{$first: "$checklist.isLandlordVerified"}, false]},
+                    "Is Email Suppressed" : {$first: "$checklist.isEmailSuppressed"},
+                    "Verified By" : {$first: "$verifier.fullName"},
                     _id: { $toString: "$_id" },
                     newLL: "$newLL"
                 }

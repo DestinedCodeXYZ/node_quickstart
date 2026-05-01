@@ -386,6 +386,7 @@ async function run() {
             supply: "$supply",
             accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             isBooking: "$isBooking",
+            propertyCycle: {$add: ["$cpAll.cycle", 1]},
             isExtension: "$bookingOne.extension.isExtension",
             isDecant: "$isDecant"
             }
@@ -400,8 +401,8 @@ async function run() {
         const sheetName = "offered_raw";
         const finalPath = path.join(
                             os.homedir(),
-                            process.env.ONEDRIVE_KW,
-                            process.env.OD_DUMP
+                            process.env.ONEDRIVE_DIR,
+                            process.env.OD_FILENAME
                         );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

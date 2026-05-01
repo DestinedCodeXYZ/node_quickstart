@@ -172,8 +172,8 @@ async function run() {
         const sheetName = "props_raw";
         const finalPath = path.join(
                     os.homedir(),
-                    process.env.ONEDRIVE_KW,
-                    process.env.OD_DUMP
+                    process.env.ONEDRIVE_DIR,
+                    process.env.OD_FILENAME
                 );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

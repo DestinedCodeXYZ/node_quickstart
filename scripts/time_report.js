@@ -143,7 +143,7 @@ async function run() {
                                     cond: {
                                         $and: [
                                             { $eq: ["$$h.changes.status.new", "offeredOut"] },
-                                            { $eq: ["$$h.attributedCycle", { $ifNull: [{ $last: "$sortedCycles.cycle" }, 0] }] }
+                                            { $eq: ["$$h.attributedCycle", { $ifNull: [{ $first: "$sortedCycles.cycle" }, 0] }] }
                                         ]
                                     }
                                 }

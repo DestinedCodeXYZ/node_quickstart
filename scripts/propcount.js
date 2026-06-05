@@ -18,7 +18,7 @@ async function run() {
         const properties = database.collection('properties');
 
         const postcodeList = [
-            "EN2", "EN3", "N9", "N11", "N13", "N14", "N18", "N21"
+            "HA1", "HA2", "HA3", "HA5", "HA7", "HA9", "HA0"
         ];
 
         const home = await properties.aggregate([

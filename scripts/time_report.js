@@ -11,7 +11,7 @@ const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongo
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
-const start = new Date(Date.UTC(2025, 9, 1));
+const start = new Date(Date.UTC(2025, 8, 1));
 
 // Query for all existing enquiries on db
 async function run() {
@@ -267,7 +267,10 @@ async function run() {
                                 },
                                 "Business Hours": "$businessHours",
                                 "Duration Band": "$durationBand",
-                                isExtension: "$extension.isExtension"
+                                isExtension: { $cond: [
+                                    { $regexMatch: { input: "$reference", regex: "EXT" } },
+                                    true, false
+                                ] },
                             }
                         }
                     ],

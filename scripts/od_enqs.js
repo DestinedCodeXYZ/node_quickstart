@@ -97,7 +97,10 @@ async function run() {
                 checkOut: {$toDate: "$availability.checkOut"},
                 averageAirbnbPrice: "$averageAirbnbPrice",
                 status: "$status",
-                isExtension: "$extension.isExtension",
+                isExtension: { $cond: [
+                { $regexMatch: { input: "$reference", regex: "EXT" } },
+                true, false
+            ] },
                 accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             } 
         },  

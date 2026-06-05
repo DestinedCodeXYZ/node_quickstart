@@ -207,6 +207,7 @@ async function run() {
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
                     landlord: "$landlords.displayName",
+                    compName: "$landlords.company.name",
                     landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
                     landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     duration: {$toInt: "$expectedDuration"},

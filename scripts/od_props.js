@@ -53,12 +53,13 @@ async function run() {
                 {  
                     name: "$name",
                     createdAt: "$createdAt", 
-                    
-
                     longitude: {$arrayElemAt: ["$address.position.coordinates", 0]},
                     latitude: {$arrayElemAt: ["$address.position.coordinates", 1]},
                     postcode: "$address.zip",
                     fullAddress: "$address.freeFormAddress",
+                    units: {$cond: [
+                        {$in: ["$numberOfUnits", [null, 0]]}, 1, "$numberOfUnits"
+                    ]},
                     bedrooms: "$numberOfBedrooms",
                     beds: {
                         $subtract: [

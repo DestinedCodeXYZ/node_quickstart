@@ -72,6 +72,7 @@ async function run() {
             {
                 $project: {
                     createdAt: "$createdAt",
+                    _id: { $toString: "$_id" },
                     name: "$displayName",
                     phone1: { $first : { $first: "$contacts.phoneNumbers.phone" } },
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
@@ -81,12 +82,12 @@ async function run() {
                     "Size" : "$size",
                     "Ownership" : "$ownership",
                     "Traffic light system" : "$trafficLightSystem",
-                    "No of Listings on Orbit" : "$numberOfListings",
+                    "No of Listings on Orbit" : {$ifNull: ["$numberOfListings", 0]},
                     "No of Bookings" : {$ifNull: ["$historicalBookings", 0]},
                     "Is Verified" : {$ifNull: [{$first: "$checklist.isLandlordVerified"}, false]},
                     "Is Email Suppressed" : {$first: "$checklist.isEmailSuppressed"},
                     "Verified By" : {$first: "$verifier.fullName"},
-                    _id: { $toString: "$_id" },
+                    "WhatsApp Number?": "$contactNumber.isWhatsapp",
                     newLL: "$newLL"
                 }
             },

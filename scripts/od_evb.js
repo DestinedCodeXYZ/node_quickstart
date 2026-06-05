@@ -72,9 +72,9 @@ async function run() {
 
         { $unwind: { path: "$cpAll", preserveNullAndEmptyArrays: false } },
 
-        { $match: { "cpAll.status": {$ne: "rejected"} } },
+        { $match: { "cpAll.status": {$in: ["offeredOut"]} } },
 
-        // Place this AFTER you filter out the "rejected" properties
+        // Property ranking
         {
             $setWindowFields: {
                 partitionBy: "$_id",             // Resets rank to 1 for every new enquiry
@@ -90,7 +90,7 @@ async function run() {
         {
             $lookup: {
                 from: "accounts",
-                localField: "cpAll.createdBy",
+                localField: "cpAll.createdBy", 
                 foreignField: "_id",
                 as: "addedBy"
             }
@@ -373,6 +373,7 @@ async function run() {
             $project: {
             _id: 0,
             createdDate: {$toDate: "$createdAt"},
+            offeredDate: {$toDate: "$cpAll.createdAt" },
             ref: "$reference",
             agent: "$agent.fullName",
             assignedTo: "$acc.fullName",
@@ -393,6 +394,7 @@ async function run() {
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
             landlordName: "$landlords.displayName",
+            company : "$landlords.company.name",
             landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } }, 
             landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
             landlordRate: "$cpAll.costs.nightlyRate.amount",

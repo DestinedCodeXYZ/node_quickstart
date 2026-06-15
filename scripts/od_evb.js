@@ -386,7 +386,7 @@ async function run() {
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",
             parkingType: "$prop.parkingType.value",
-            avgAirbnbPrice: "$averageAirbnbPrice",       
+            avgAirbnbPrice: {$ifNull: ["$averageAirbnbPrice", 0]},       
             enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",

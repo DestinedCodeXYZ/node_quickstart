@@ -53,20 +53,48 @@ async function run() {
 
         const enqs_vs_bookings = await enquiries.aggregate([
 
+        { $match: { isDeleted: false, status: { $nin: ["cancelled"] } } },
 
+        { $sort: { createdAt: 1 } },
 
         // one row per offered-out chosenproperty
         {
             $lookup: {
-            from: "chosenproperties",
-            localField: "_id",
-            foreignField: "enquiryId",
-            as: "cpAll"
+                from: "chosenproperties",
+                let: { enqId: "$_id" },
+                pipeline: [
+                    { $match: { $expr: { $eq: ["$enquiryId", "$$enqId"] } } },
+                    { $sort: { createdAt: 1 } }
+                ],
+                as: "cpAll"
             }
         },
 
         { $unwind: { path: "$cpAll", preserveNullAndEmptyArrays: false } },
 
+        { $match: { "cpAll.status": {$in: ["offeredOut"]} } },
+
+        // Property ranking
+        {
+            $setWindowFields: {
+                partitionBy: "$_id",             // Resets rank to 1 for every new enquiry
+                sortBy: { "cpAll.createdAt": 1 }, // Oldest to newest
+                output: {
+                    propertyRank: {
+                        $documentNumber: {}            // 1, 2, 3... (no skips, no ties)
+                    }
+                }
+            }
+        },
+        
+        {
+            $lookup: {
+                from: "accounts",
+                localField: "cpAll.createdBy", 
+                foreignField: "_id",
+                as: "addedBy"
+            }
+        },
         // property for this CP
         {
             $lookup: {
@@ -192,6 +220,15 @@ async function run() {
         }
         },
 
+        {
+            $unset: [
+                "_lat1", "_lon1", "_lat2", "_lon2", 
+                "_dLat", "_dLon", "_sinHalf_dLat", 
+                "_sinHalf_dLon", "_sin2_dLat", "_sin2_dLon", 
+                "_cos1", "_cos2", "_a", "_aClamped", "_haveCoords"
+            ]
+        },
+
         // agent/account (assumed 1:1)
         {
             $lookup: {
@@ -216,18 +253,17 @@ async function run() {
         {
             $lookup: {
                 from: "accounts",
-                localField: "cpAll.createdBy",
+                localField: "approval.approvedBy",
                 foreignField: "_id",
-                as: "addedBy"
+                as: "approvedBy"
             }
         },
 
         {
-            $lookup: {
-                from: "accounts",
-                localField: "approval.approvedBy",
-                foreignField: "_id",
-                as: "approvedBy"
+            $addFields: {
+                acc: { $arrayElemAt: ["$acc", 0] },
+                addedBy: { $arrayElemAt: ["$addedBy", 0] },
+                approvedBy: { $arrayElemAt: ["$approvedBy", 0] }
             }
         },
 
@@ -272,14 +308,14 @@ async function run() {
 
         { $unwind: { path: "$client", preserveNullAndEmptyArrays: true } },
 
-        // booked cp id (prefer selectedPropertyId; fallback to bookingOne.property)
+        // booked chosenprop id (prefer selectedPropertyId; fallback to bookingOne.property)
         {
             $addFields: {
             _bookedCpId: { $ifNull: ["$selectedPropertyId", "$bookingOne.property"] }
             }
         },
 
-        // flag booked row: enquiry is "booked" AND this cp equals selectedPropertyId
+        // flag booked row: enquiry is "booked" AND this chosenprop equals selectedPropertyId
         {
             $addFields: {
             isBooking: {
@@ -293,12 +329,21 @@ async function run() {
             }
         },
 
-        {
-            $match: {
-                "cpAll.status": {$ne: "rejected"}
-            }
+        // Singling out the booked property - must be selected & enquiry must be booked.
+        { 
+            $addFields: {
+                isPropertyBooked: {
+                    $cond: [ { 
+                        $and: [
+                            { $eq: ["$selectedPropertyId", "$cpAll._id" ] }, 
+                            { $eq: ["$status", "booked"] } 
+                        ] 
+                    }, true, false ]
+                }
+            } 
         },
 
+        // Cancellation policy field
         {
             $addFields: {
                 cancellationPolicy: {
@@ -319,21 +364,21 @@ async function run() {
 
         { 
             $match: { 
-                isDeleted: false, 
-                status: { $nin: ["cancelled"] },
-                $expr: { $ne: [ {$first: "$addedBy.fullName"}, "Admin Master"]} 
+                $expr: { $ne: [ "$addedBy.fullName", "Admin Master"]} 
             } 
         },
+
         // output
         {
             $project: {
             _id: 0,
             createdDate: {$toDate: "$createdAt"},
+            offeredDate: {$toDate: "$cpAll.createdAt" },
             ref: "$reference",
             agent: "$agent.fullName",
-            assignedTo: {$first: "$acc.fullName"},
-            addedBy: {$first: "$addedBy.fullName"},
-            approvedBy: {$first: "$approvedBy.fullName"},
+            assignedTo: "$acc.fullName",
+            addedBy: "$addedBy.fullName",
+            approvedBy: "$approvedBy.fullName",
             client: "$client.fullName",
             checkIn: "$availability.checkIn",
             checkOut: "$availability.checkOut",
@@ -341,7 +386,7 @@ async function run() {
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",
             parkingType: "$prop.parkingType.value",
-            avgAirbnbPrice: "$averageAirbnbPrice",       
+            avgAirbnbPrice: {$ifNull: ["$averageAirbnbPrice", 0]},       
             enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
@@ -349,6 +394,7 @@ async function run() {
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
             landlordName: "$landlords.displayName",
+            company : "$landlords.company.name",
             landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } }, 
             landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
             landlordRate: "$cpAll.costs.nightlyRate.amount",
@@ -386,22 +432,28 @@ async function run() {
             supply: "$supply",
             accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             isBooking: "$isBooking",
-            isExtension: "$bookingOne.extension.isExtension",
+            isPropertyBooked: "$isPropertyBooked",
+            propertyCycle: {$add: ["$cpAll.cycle", 1]},
+            propertyRank: "$propertyRank",
+            isExtension: { $cond: [
+                { $regexMatch: { input: "$reference", regex: "EXT" } },
+                true, false
+            ] },
             isDecant: "$isDecant"
             }
         },
 
-        { $sort: { createdAt: 1, propName: 1 } }
+        
       
-        ]).toArray();
+        ], { allowDiskUse: true }).toArray();
 
         console.log(enqs_vs_bookings)
  // 1. Configuration
         const sheetName = "offered_raw";
         const finalPath = path.join(
                             os.homedir(),
-                            process.env.ONEDRIVE_KW,
-                            process.env.OD_DUMP
+                            process.env.ONEDRIVE_DIR,
+                            process.env.OD_FILENAME
                         );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

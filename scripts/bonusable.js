@@ -1,5 +1,5 @@
 // Invoking libraries
-const { MongoClient } = require('mongodb');
+const mongoose = require('mongoose'); // Swapped out MongoClient
 const XLSX = require('xlsx');
 const fs = require('fs');
 const os = require('os');
@@ -8,24 +8,28 @@ const path = require('path');
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
-
-// Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
-const client  = new MongoClient(url);
+const url = process.env.DB_PASS;
 
 const insurance = ["Romi Mitchell", "Roland Roserie", "Laila Essebane", "Jared Garfield ", "Janiv Shah", "Tracy McAlister"];
 const start = new Date(Date.UTC(2026, 0, 1));
 
+// Define a minimal Mongoose Schema for the 'bookings' collection. 
+// { strict: false } lets Mongoose process your aggregation without needing explicit field definitions.
+const bookingSchema = new mongoose.Schema({}, { collection: 'bookings', strict: false });
+const Booking = mongoose.model('Booking', bookingSchema);
+
 async function run() {
     try {
-        await client.connect();
-        console.log("Successfully connected to Atlas!\n");
+        // Mongoose Connection (Targeting 'myhomeisyours-live' database directly if not specified in DB_PASS string)
+        await mongoose.connect(url, {
+            dbName: 'myhomeisyours-live' 
+        });
+        console.log("Successfully connected to Atlas via Mongoose!\n");
         
-        const database = client.db('myhomeisyours-live');
-        const bookings = database.collection('bookings');
-
-        const pricing = await bookings.aggregate([
-
+        // Execute the exact same aggregation array directly on the Mongoose Model
+        // .sort() can be included right inside the pipeline or attached as a Mongoose chain.
+        // Mongoose aggregates return plain JSON arrays natively, so `.toArray()` is removed.
+        const pricing = await Booking.aggregate([
             {
                 $lookup: {
                     from: "enquiries",
@@ -145,7 +149,7 @@ async function run() {
                 }
             },
             
-            // Duration bonus check -- WORKS
+            // Duration bonus check
             {
                 $addFields: {
                     durationBonus: {
@@ -159,12 +163,12 @@ async function run() {
                                         onNull: 0
                                     } 
                                 }, 7
-                            ]}, true, false
+                            ]  }, true, false
                         ]
                     }
                 }
             },
-            // Margin bonus check -- WORKS
+            // Margin bonus check
             {
                 $addFields: {
                     marginBonus: {
@@ -177,7 +181,7 @@ async function run() {
                 }
             },
 
-            // Deposit bonus check -- WORKS
+            // Deposit bonus check
             {
                 $addFields: {
                     depositBonus: {
@@ -202,7 +206,7 @@ async function run() {
                     }
                 }
             },
-            // Parking bonus check -- WORKS
+            // Parking bonus check
             {
                 $addFields: {
                     parkingBonus: {
@@ -252,12 +256,12 @@ async function run() {
                     }
                 }
             },
-            // Pet bonus check -- WORKS
+            // Pet bonus check
             {
                 $addFields: {
                     petBonus: {
                         $or: [
-                            // 1. Pets but insurance (Safe: uses totalPets -> pets -> 0)
+                            // 1. Pets but insurance 
                             {
                             $and: [
                                 { $gt: [{ $ifNull: ["$enq.request.propertyPreferences.totalPets", "$enq.request.propertyPreferences.pets", 0] }, 0] },
@@ -266,7 +270,7 @@ async function run() {
                                 { $gt: ["$pricing.costs.pet.amount", 0] }
                             ]
                             },
-                            // 2. Pets (Fixed: Added $ifNull fallback to 0)
+                            // 2. Pets 
                             {
                             $and: [
                                 { $gt: [{ $ifNull: ["$enq.request.propertyPreferences.totalPets", 0] }, 0] },
@@ -274,7 +278,7 @@ async function run() {
                                 { $gt: ["$pricing.costs.pet.amount", 0] }
                             ]
                             },
-                            // 3. No pets (Fixed: Added $ifNull fallback to 0)
+                            // 3. No pets
                             {
                             $and: [
                                 { $eq: [{ $ifNull: ["$enq.request.propertyPreferences.totalPets", 0] }, 0] },
@@ -287,7 +291,7 @@ async function run() {
                 }
             },
 
-            // All-in-one bonus column so I don't have to project & filter all 3
+            // All-in-one bonus column
             { $addFields: {
                     isBonusable: {
                         $and: [
@@ -330,8 +334,8 @@ async function run() {
                         $convert: {
                             input: "$enq.averageAirbnbPrice",
                             to: "int",
-                            onError: 0,   // default value if it’s invalid (e.g. "")
-                            onNull: 0     // default value if it's null or missing
+                            onError: 0,  
+                            onNull: 0     
                             }
                         },
                     supply: "$enq.supply",
@@ -373,15 +377,12 @@ async function run() {
                             $or: [
                             {
                                 $and: [
-                                // Regex to check for free parking in type.
                                     { $regexMatch: {
                                         input: "$prop.parkingType.value",
                                         regex: ".*free.*",
                                         options: "i"
                                         }
                                     },
-                                    
-                                    // Regex to check for free parking in title
                                     { $regexMatch: {
                                         input: "$prop.name",
                                         regex: "free.*parking",
@@ -393,7 +394,6 @@ async function run() {
 
                             {
                                 $and: [
-                                // Regex to check for paid parking in type.
                                     { $not: [
                                         { $regexMatch: {
                                             input: "$prop.parkingType.value",
@@ -401,7 +401,6 @@ async function run() {
                                             options: "i"
                                         }}]
                                     },
-                                // Regex to check free parking is not in title
                                     { $not: [{
                                         $regexMatch: {
                                             input: "$name",
@@ -421,14 +420,14 @@ async function run() {
                     durationBonus: "$durationBonus",
                     isBonusable: "$isBonusable"
                 }
-            }
+            },
+            // Handled the sorting step as an explicit part of the aggregation array
+            { $sort: { createdAt: 1 } }
+        ]);
 
-        ]).sort({ createdAt: 1 }).toArray();
+        console.log(`Retrieved ${pricing.length} booking records.`);
 
-        console.log(pricing)
-
-
-        // 1. Configuration
+        // 1. Excel Configuration
         const sheetName = "bonus_raw";
         const finalPath = path.join(
                     os.homedir(),
@@ -443,7 +442,6 @@ async function run() {
         if (fs.existsSync(finalPath)) {
             try {
                 workbook = XLSX.readFile(finalPath);
-                // Remove existing sheet to ensure a clean overwrite
                 if (workbook.SheetNames.includes(sheetName)) {
                     delete workbook.Sheets[sheetName];
                     workbook.SheetNames = workbook.SheetNames.filter(name => name !== sheetName);
@@ -462,13 +460,9 @@ async function run() {
 
         // 4. Atomic Write Strategy
         try {
-            // Write to Temp first to avoid corrupting the main file if the script crashes
             XLSX.writeFile(workbook, tempPath);
-            
-            // Copy to OneDrive (Copy + Unlink is often safer than Rename for cloud-synced folders)
             fs.copyFileSync(tempPath, finalPath);
             fs.unlinkSync(tempPath);
-            
             console.log(`Successfully exported ${pricing.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
@@ -478,11 +472,12 @@ async function run() {
             }
         }        
         
-} catch (err) {
-        console.log(err.stack);
-    }
-    finally {
-        await client.close();
+    } catch (err) {
+        console.error("Pipeline Runtime Error:", err.stack);
+    } finally {
+        // Disconnect using Mongoose
+        await mongoose.disconnect();
+        console.log("Mongoose disconnected safely.");
     }
 }
 

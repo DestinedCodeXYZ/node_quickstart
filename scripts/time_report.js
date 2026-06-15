@@ -11,7 +11,7 @@ const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongo
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
-const start = new Date(Date.UTC(2026, 0, 1));
+const start = new Date(Date.UTC(2025, 8, 1));
 
 // Query for all existing enquiries on db
 async function run() {
@@ -143,7 +143,7 @@ async function run() {
                                     cond: {
                                         $and: [
                                             { $eq: ["$$h.changes.status.new", "offeredOut"] },
-                                            { $eq: ["$$h.attributedCycle", { $ifNull: [{ $last: "$sortedCycles.cycle" }, 0] }] }
+                                            { $eq: ["$$h.attributedCycle", { $ifNull: [{ $first: "$sortedCycles.cycle" }, 0] }] }
                                         ]
                                     }
                                 }
@@ -267,7 +267,10 @@ async function run() {
                                 },
                                 "Business Hours": "$businessHours",
                                 "Duration Band": "$durationBand",
-                                isExtension: "$extension.isExtension"
+                                isExtension: { $cond: [
+                                    { $regexMatch: { input: "$reference", regex: "EXT" } },
+                                    true, false
+                                ] },
                             }
                         }
                     ],
@@ -287,8 +290,8 @@ async function run() {
         const sheetName = "time_report_raw";
         const finalPath = path.join(
                     os.homedir(),
-                    process.env.ONEDRIVE_KW,
-                    process.env.OD_DUMP
+                    process.env.ONEDRIVE_DIR,
+                    process.env.OD_FILENAME
                 );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

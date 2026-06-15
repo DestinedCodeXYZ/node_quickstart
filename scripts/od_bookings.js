@@ -207,6 +207,7 @@ async function run() {
                     homeAddress: "$address.freeFormAddress",
                     bookedAddress: "$prop.address.freeFormAddress",
                     landlord: "$landlords.displayName",
+                    compName: "$landlords.company.name",
                     landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
                     landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
                     duration: {$toInt: "$expectedDuration"},
@@ -315,8 +316,8 @@ async function run() {
         const sheetName = "bookings_raw";
         const finalPath = path.join(
                     os.homedir(),
-                    process.env.ONEDRIVE_KW,
-                    process.env.OD_DUMP
+                    process.env.ONEDRIVE_DIR,
+                    process.env.OD_FILENAME
                 );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

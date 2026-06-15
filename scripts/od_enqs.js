@@ -97,7 +97,10 @@ async function run() {
                 checkOut: {$toDate: "$availability.checkOut"},
                 averageAirbnbPrice: "$averageAirbnbPrice",
                 status: "$status",
-                isExtension: "$extension.isExtension",
+                isExtension: { $cond: [
+                { $regexMatch: { input: "$reference", regex: "EXT" } },
+                true, false
+            ] },
                 accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             } 
         },  
@@ -110,8 +113,8 @@ async function run() {
         const sheetName = "enqs_raw";
         const finalPath = path.join(
                             os.homedir(),
-                            process.env.ONEDRIVE_KW,
-                            process.env.OD_DUMP
+                            process.env.ONEDRIVE_DIR,
+                            process.env.OD_FILENAME
                         );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

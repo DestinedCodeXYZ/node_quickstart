@@ -164,9 +164,26 @@ async function run() {
                 }
             },
 
-            { $unwind: "$landlords" },
+            { $unwind: {
+                path: "$landlords",
+                preserveNullAndEmptyArrays: true
+                }
+            },
 
-
+            { $addFields:
+                { newLL:
+                    { $cond: [
+                        { $lt: [
+                            { $subtract: ["$createdAt", "$landlords.createdAt"] },
+                            1000*60*60*24*30
+                            ] 
+                        },
+                        true, false
+                    ] 
+                    }
+                }
+            },
+            
             { 
                 $project: {
                     _id: 0,
@@ -216,9 +233,13 @@ async function run() {
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
                     mhiyMarginVal: { $round: [{ $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] }, 2] },
                     expectedYield: { $multiply: [
+                            { $subtract: [
                                 { $multiply: 
-                                    [ "$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] }  ],  
+                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
                                 },
+                                "$pricing.info.landlordRate"
+                                ] 
+                            },
                             {$toInt: "$expectedDuration"} 
                         ]
                     },
@@ -281,7 +302,8 @@ async function run() {
                                 ]
                             }
                         ]}
-                    }
+                    },
+                    newLL: "$newLL"
                 }
             }
 

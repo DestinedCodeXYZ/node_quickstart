@@ -53,12 +53,13 @@ async function run() {
                 {  
                     name: "$name",
                     createdAt: "$createdAt", 
-                    
-
                     longitude: {$arrayElemAt: ["$address.position.coordinates", 0]},
                     latitude: {$arrayElemAt: ["$address.position.coordinates", 1]},
                     postcode: "$address.zip",
                     fullAddress: "$address.freeFormAddress",
+                    units: {$cond: [
+                        {$in: ["$numberOfUnits", [null, 0]]}, 1, "$numberOfUnits"
+                    ]},
                     bedrooms: "$numberOfBedrooms",
                     beds: {
                         $subtract: [
@@ -172,8 +173,8 @@ async function run() {
         const sheetName = "props_raw";
         const finalPath = path.join(
                     os.homedir(),
-                    process.env.ONEDRIVE_KW,
-                    process.env.OD_DUMP
+                    process.env.ONEDRIVE_DIR,
+                    process.env.OD_FILENAME
                 );
         const tempPath = path.join(process.env.TEMP, 'temp_export_check.xlsm');
 

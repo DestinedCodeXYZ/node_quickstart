@@ -36,7 +36,7 @@ async function run() {
         {
             $lookup: {
                 from: "accounts",
-                localField: "assigned",
+                localField: "assigned.account",
                 foreignField: "_id",
                 as: "acc"
             }
@@ -88,7 +88,7 @@ async function run() {
                 _id: 0,
                 createdDate: {$toDate: "$createdAt"},
                 ref: "$reference",
-                agent : {$first: "$acc.fullName"},
+                assignedTo : {$first: "$acc.fullName"},
                 requestBy: "$agent.fullName",
                 company: "$comp.name",
                 guest: "$clientName",

@@ -70,6 +70,7 @@ async function run() {
             }
         },
 
+
         { $unwind: { path: "$cpAll", preserveNullAndEmptyArrays: false } },
 
         { $match: { "cpAll.status": {$in: ["offeredOut"]} } },
@@ -87,6 +88,17 @@ async function run() {
             }
         },
         
+        {
+            $lookup: {
+                from: "companies",
+                localField: "company",
+                foreignField: "_id",
+                as: "supplier"
+            }
+        },
+
+        { $unwind: "$supplier"},
+
         {
             $lookup: {
                 from: "accounts",
@@ -244,7 +256,7 @@ async function run() {
         {
             $lookup: { 
                 from: "accounts", 
-                localField: "assigned", 
+                localField: "assigned.account", 
                 foreignField: "_id", 
                 as: "acc" 
             }
@@ -379,7 +391,8 @@ async function run() {
             assignedTo: "$acc.fullName",
             addedBy: "$addedBy.fullName",
             approvedBy: "$approvedBy.fullName",
-            client: "$client.fullName",
+            supplier: "$supplier.name",
+            guest: "$client.fullName",
             checkIn: "$availability.checkIn",
             checkOut: "$availability.checkOut",
             duration: {$toInt: "$availability.expectedDuration"},
@@ -409,12 +422,12 @@ async function run() {
             icabRate: {
                 $round: [
                     {
-                        $multiply: [{
+                        $divide: [{
                             $multiply: [
                             "$cpAll.costs.nightlyRate.amount",
                             { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
                                 ]
-                        }, 1.15]
+                        }, 0.85]
                     },
                 2]
             }, 

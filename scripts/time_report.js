@@ -39,7 +39,7 @@ async function run() {
             {
                 $lookup: {
                     from: "accounts",
-                    localField: "assigned",
+                    localField: "assigned.account",
                     foreignField: "_id",
                     as: "acc"
                 }
@@ -257,7 +257,7 @@ async function run() {
                                 "Company" : "$comp.name",
                                 "Status" : "$status",
                                 "Latest Cycle": {$last: "$sortedCycles.cycle"},
-                                "Agent": { $first: "$acc.fullName" },
+                                "Assigned To": { $first: "$acc.fullName" },
                                 "Business Duration": {
                                     $concat: [
                                         { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } },

@@ -43,7 +43,7 @@ async function run() {
             { $lookup:
                 {
                     from: "accounts",
-                    localField: "enq.assigned",
+                    localField: "enq.assigned.account",
                     foreignField: "_id",
                     as: "enqAssigned"
                 }
@@ -345,7 +345,8 @@ async function run() {
                                 $eq: ["$prop.name", "$previousProp.name"]
                             }, true, false]
                         }
-                    }
+                    },
+                    extCount: "$extension.number"
                 }
             }
 

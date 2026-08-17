@@ -330,7 +330,7 @@ async function run() {
             console.log(`Successfully exported ${facetedData.enquiryList.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
-                console.error("ERROR: File is locked. Please close 'RAW_DATA' in Excel and try again.");
+                console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");
             } else {
                 console.error("ERROR during export:", err.message);
             }

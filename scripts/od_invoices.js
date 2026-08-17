@@ -13,107 +13,72 @@ const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongo
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
 
-// Query for all existing enquiries on db
+// Query for all existing invoices on db
 async function run() {
     try {
         await client.connect();
         console.log("Successfully connected to Atlas!\n");
         
         const database = client.db('myhomeisyours-live');
-        const enquiries = database.collection('enquiries');
+        const invoices = database.collection('invoices');
 
-        const existing_enqs = await enquiries.aggregate([
-
-        // Filter for deleted & cancelled enquiries
-        {
-            $match: {
-                    "isDeleted" : false, 
-                    "status" : {$nin : ["cancelled"]},
-                }
-        },
-
-        // Join on accounts
-        {
-            $lookup: {
-                from: "accounts",
-                localField: "assigned.account",
-                foreignField: "_id",
-                as: "acc"
-            }
-        },
-
-
+        const query = await invoices.aggregate([
 
         {
             $lookup: {
-                from: "agents",
-                localField: "requestBy",
+                from: "bookings",
+                localField: "booking",
                 foreignField: "_id",
-                as: "agent"
+                as: "booking"
             }
         },
 
-        { 
-            $unwind: {
-                path: "$agent",
-                preserveNullAndEmptyArrays: true
-            } 
+        {
+            $unwind: "$booking"
         },
 
-        // Join on companies
         {
             $lookup: {
-                from: "companies",
-                localField: "company",
+                from: "clients",
+                localField: "booking.client",
                 foreignField: "_id",
-                as: "comp"
+                as: "client"
             }
         },
 
         {
-            $unwind: {
-                path: "$comp",
-                preserveNullAndEmptyArrays: true 
-            }
+            $unwind: "$client",
         },
-
-        {
-            $match: {
-                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
-            }
-        },
-
+        
         {
             $project: {
                 _id: 0,
-                createdDate: {$toDate: "$createdAt"},
-                ref: "$reference",
-                assignedTo : {$first: "$acc.fullName"},
-                requestBy: "$agent.fullName",
-                company: "$comp.name",
-                guest: "$clientName",
-                duration: {$toInt: "$availability.expectedDuration"},
-                checkIn: {$toDate: "$availability.checkIn"},
-                checkOut: {$toDate: "$availability.checkOut"},
-                averageAirbnbPrice: "$averageAirbnbPrice",
-                status: "$status",
-                isExtension: { $cond: [
-                { $regexMatch: { input: "$reference", regex: "EXT" } },
-                true, false
-            ] },
-                accessibility: "$request.propertyPreferences.isAccessibilityRequired",
-                "First Offer Date" : { $last: "$offer.createdAt" },
-                "Latest Offer Date": { $first: "$offer.createdAt" },
-                "Offered Multiple Times" : { $cond: [ { $eq: [ { $first: "$offer.createdAt" }, { $last: "$offer.createdAt" } ] }, false, true ] }
+                "Invoice Number": "$invoiceNumber",
+                "Supplier": "$customer.name",
+                "Reference": "$booking.reference",
+                "Guest": "$client.fullName",
+                "Invoice Date": { $toDate: "$invoiceDate" },
+                "Due Date": { $toDate: "$dueDate" },
+                "Status": "$status",
+                "Currency": "$currency.ref",
+                "Total to Supplier": "$totalAmount",
+                "Total due to Bnbl": "$totalEffectiveAmount",
+                "Total Tax": "$totalTax",
+                "Grand Stay Total": "$grandStayTotal",
+                "Bnbl Rate" : { $multiply: [
+                    { $add: [1, { $divide: [ { $toInt: "$booking.pricing.info.mhiyCommission" }, 100]  } ] },
+                    "$booking.pricing.info.landlordRate"
+                    ] 
+                }
             } 
         },  
                
         ]).sort({ createdDate: 1, guest: 1 }).toArray();
 
-        console.log(existing_enqs)
+        console.log(query)
         
         // 1. Configuration
-        const sheetName = "enqs_raw";
+        const sheetName = "invoices_raw";
         const finalPath = path.join(
                             os.homedir(),
                             process.env.ONEDRIVE_DIR,
@@ -141,7 +106,7 @@ async function run() {
         }
 
         // 3. Add Data
-        const worksheet = XLSX.utils.json_to_sheet(existing_enqs);
+        const worksheet = XLSX.utils.json_to_sheet(query);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
         // 4. Atomic Write Strategy
@@ -153,7 +118,7 @@ async function run() {
             fs.copyFileSync(tempPath, finalPath);
             fs.unlinkSync(tempPath);
             
-            console.log(`Successfully exported ${existing_enqs.length} rows to: ${finalPath}`);
+            console.log(`Successfully exported ${query.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
                 console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");

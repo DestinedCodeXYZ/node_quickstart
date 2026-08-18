@@ -385,18 +385,24 @@ async function run() {
         {
             $addFields: {
                 cancellationPolicy: {
-                    $convert: {
-                        input: {
-                            $getField: {
-                                field: "match",
-                                input: {$regexFind: { input: "$prop.cancellationType", regex: /\d+/ }}
+                    $cond: [
+                        { $regexMatch : { input: "$prop.cancellationType", regex: /\d+/ } },
+                        { $convert: {
+                            input: {
+                                $getField: {
+                                    field: "match",
+                                    input: {$regexFind: { input: "$prop.cancellationType", regex: /\d+/ }}
+                                }
+                            },
+                            to: "int",
+                            onError: null,
+                            onNull: null
                             }
                         },
-                        to: "int",
-                        onError: null,
-                        onNull: null
-                    }
+                        "$prop.cancellationType" 
+                    ]
                 }
+
             }
         },
 

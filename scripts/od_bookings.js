@@ -206,7 +206,7 @@ async function run() {
                     createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
                     gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
-                    enqAssignedTo: {$first: "$enqAssigned.fullName"},
+                    enqAssignedTo: {$last: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",

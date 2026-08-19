@@ -75,6 +75,28 @@ async function run() {
 
         { $match: { "cpAll.status": {$in: ["offeredOut"]} } },
 
+        {
+            $addFields: {
+                firstAssignedAccountId: { $first: "$assigned.account" }
+            }
+        },
+
+          
+        {
+            $lookup: {
+                from: "accounts",
+                localField: "firstAssignedAccountId",
+                foreignField: "_id",
+                as: "firstAccount"
+            }
+        }, 
+
+        {
+            $unwind: {
+                path: "$firstAccount",
+                preserveNullAndEmptyArrays: true
+            }
+        },         
         
         // Property ranking
         {
@@ -420,7 +442,7 @@ async function run() {
             offeredDate: {$toDate: "$cpAll.createdAt" },
             ref: "$reference",
             agent: "$agent.fullName",
-            assignedTo: "$acc.fullName",
+            assignedTo: "$firstAccount.fullName",
             addedBy: "$addedBy.fullName",
             approvedBy: "$approvedBy.fullName",
             supplier: "$supplier.name",

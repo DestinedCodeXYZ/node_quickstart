@@ -154,6 +154,12 @@ async function run() {
                 }
             },
 
+            {
+                $match: {
+                    earliestOffer: { $ne: null }
+                }
+            },
+            
             // 6. Business Hour Configuration & Calculations
             {
                 $addFields: {

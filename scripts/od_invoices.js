@@ -34,7 +34,7 @@ async function run() {
         },
 
         {
-            $unwind: "$booking"
+            $unwind: { path: "$booking", preserveNullAndEmptyArrays: true }
         },
 
         {
@@ -47,7 +47,7 @@ async function run() {
         },
 
         {
-            $unwind: "$client",
+            $unwind: { path: "$client", preserveNullAndEmptyArrays: true }
         },
         
         {
@@ -58,6 +58,8 @@ async function run() {
                 "Reference": "$booking.reference",
                 "Guest": "$client.fullName",
                 "Invoice Date": { $toDate: "$invoiceDate" },
+                "Check-in": { $toDate: "$booking.checkIn"},
+                "Check-out": { $toDate: "$booking.checkOut"},
                 "Due Date": { $toDate: "$dueDate" },
                 "Status": "$status",
                 "Currency": "$currency.ref",
@@ -66,7 +68,7 @@ async function run() {
                 "Total Tax": "$totalTax",
                 "Grand Stay Total": "$grandStayTotal",
                 "Bnbl Rate" : { $multiply: [
-                    { $add: [1, { $divide: [ { $toInt: "$booking.pricing.info.mhiyCommission" }, 100]  } ] },
+                    { $add: [1, { $divide: [ { $toDouble: "$booking.pricing.info.mhiyCommission" }, 100]  } ] },
                     "$booking.pricing.info.landlordRate"
                     ] 
                 }

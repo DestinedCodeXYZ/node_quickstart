@@ -26,8 +26,7 @@ async function run() {
     
             {
                 $match: {
-                    "isDeleted": false, 
-                    "status": { $nin: ["cancelled"] }
+                    "isDeleted": false
                 }
             },
 

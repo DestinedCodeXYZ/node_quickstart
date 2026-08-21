@@ -18,11 +18,7 @@ async function run() {
         const properties = database.collection('properties');
 
         const postcodeList = [
-            "KT1", "KT2", 
-            "SW10", "SW11", "SW12", "SW13", "SW15", "SW18", "SW19",
-            "SW4", "SW6", "SW8", 
-            "TW1", "TW10", "TW2", "TW9",
-            "W12", "W14", "W6"
+            "NN1", "NN2", "NN3", "NN4", "NN5", "NN6", "NN7"
         ];
 
         const home = await properties.aggregate([
@@ -36,7 +32,7 @@ async function run() {
             {
                 $lookup : {
                     from : "landlords",
-                    localField : "landlordRef.0",
+                    localField : "landlordRef",
                     foreignField : "_id",
                     as : "landlords"
                 }
@@ -124,9 +120,9 @@ async function run() {
                     bbq: "$summary.outside.bbq.isAvailable",
                     liveLink: {$concat: ["https://www.myhomeisyours.co.uk/public/property/" ,{$toString: "$_id"}]},
                     liveExtLink: "$livePropertyLink",
-                    landlordName: "$landlords.name",
-                    landlordEmail: { $first: "$landlords.emailAddresses.email" },
-                    landlordPhone: { $first: "$landlords.phoneNumbers.phone"},
+                    landlordName: "$landlords.displayName",
+                    landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email"} },
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone"} },
                           
                 }
             },
@@ -141,7 +137,7 @@ async function run() {
         let worksheet;
         let sheetName = "property list";
         let workbook;
-        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list.xlsx';
+        let filePath = 'C:\\Users\\kevro\\Documents\\Excel Files\\property_list_northampton.xlsx';
         
         if ( fs.existsSync(filePath) ) {
         

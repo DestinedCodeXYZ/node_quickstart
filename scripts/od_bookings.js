@@ -38,11 +38,15 @@ async function run() {
                 }
             },
 
+            { $unwind: { 
+                path: "$enq",
+                preserveNullAndEmptyArrays: true
+                } },
             // Joining accounts to get assigned booker
             { $lookup:
                 {
                     from: "accounts",
-                    localField: "enq.assigned",
+                    localField: "enq.assigned.account",
                     foreignField: "_id",
                     as: "enqAssigned"
                 }
@@ -85,7 +89,7 @@ async function run() {
                 }
             },
 
-            { $unwind: {path: "$enq"} },
+            
 
             // Joining chosenproperties for detail on who added the selected property
             { $lookup:
@@ -130,7 +134,11 @@ async function run() {
                 }
             },
 
-            { $unwind: "$client" },
+            { $unwind: { 
+                path: "$client",
+                preserveNullAndEmptyArrays: true
+                }
+            },
 
             // Left join on companies collection
             { $lookup:
@@ -142,7 +150,10 @@ async function run() {
                 }
             },
 
-            { $unwind: "$comp" },
+            { $unwind: { 
+                path: "$comp",
+                preserveNullAndEmptyArrays: true
+                } },
 
             { $lookup:
                 {
@@ -153,7 +164,11 @@ async function run() {
                 }
             },
 
-            { $unwind: "$agent" },
+            { $unwind: { 
+                path: "$agent",
+                preserveNullAndEmptyArrays: true
+                } 
+            },
 
             { $lookup:
                 {
@@ -191,7 +206,7 @@ async function run() {
                     createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
                     gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
-                    enqAssignedTo: {$first: "$enqAssigned.fullName"},
+                    enqAssignedTo: {$last: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
                     status: "$status",

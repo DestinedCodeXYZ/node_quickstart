@@ -39,7 +39,7 @@ async function run() {
             {
                 $lookup: {
                     from: "accounts",
-                    localField: "assigned",
+                    localField: "assigned.account",
                     foreignField: "_id",
                     as: "acc"
                 }
@@ -154,6 +154,12 @@ async function run() {
                 }
             },
 
+            {
+                $match: {
+                    earliestOffer: { $ne: null }
+                }
+            },
+            
             // 6. Business Hour Configuration & Calculations
             {
                 $addFields: {
@@ -257,7 +263,7 @@ async function run() {
                                 "Company" : "$comp.name",
                                 "Status" : "$status",
                                 "Latest Cycle": {$last: "$sortedCycles.cycle"},
-                                "Agent": { $first: "$acc.fullName" },
+                                "Assigned To": { $first: "$acc.fullName" },
                                 "Business Duration": {
                                     $concat: [
                                         { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } },
@@ -330,7 +336,7 @@ async function run() {
             console.log(`Successfully exported ${facetedData.enquiryList.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
-                console.error("ERROR: File is locked. Please close 'RAW_DATA' in Excel and try again.");
+                console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");
             } else {
                 console.error("ERROR during export:", err.message);
             }

@@ -23,88 +23,106 @@ async function run() {
         const enquiries = database.collection('enquiries');
 
         const existing_enqs = await enquiries.aggregate([
-
-        // Filter for deleted & cancelled enquiries
-        {
-            $match: {
-                    "isDeleted" : false, 
-                    "status" : {$nin : ["cancelled"]},
+    
+            {
+                $match: {
+                    "isDeleted": false
                 }
-        },
+            },
 
-        // Join on accounts
-        {
-            $lookup: {
-                from: "accounts",
-                localField: "assigned",
-                foreignField: "_id",
-                as: "acc"
-            }
-        },
+            {
+                $addFields: {
+                    firstAssignedAccountId: { $first: "$assigned.account" }
+                }
+            },
 
+            {
+                $lookup: {
+                    from: "accounts",
+                    localField: "firstAssignedAccountId",
+                    foreignField: "_id",
+                    as: "firstAccount"
+                }
+            },
 
+            {
+                $unwind: {
+                    path: "$firstAccount",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            
+            {
+                $match: {
+                    "firstAccount.fullName": { $ne: "Admin Master" }
+                }
+            },
+   
+            {
+                $lookup: {
+                    from: "agents",
+                    localField: "requestBy",
+                    foreignField: "_id",
+                    as: "agent"
+                }
+            },
 
-        {
-            $lookup: {
-                from: "agents",
-                localField: "requestBy",
-                foreignField: "_id",
-                as: "agent"
-            }
-        },
+            { 
+                $unwind: {
+                    path: "$agent",
+                    preserveNullAndEmptyArrays: true
+                } 
+            },
 
-        { 
-            $unwind: {
-                path: "$agent",
-                preserveNullAndEmptyArrays: true
-            } 
-        },
+            {
+                $lookup: {
+                    from: "companies",
+                    localField: "company",
+                    foreignField: "_id",
+                    as: "comp"
+                }
+            },
+            
+            {
+                $unwind: {
+                    path: "$comp",
+                    preserveNullAndEmptyArrays: true 
+                }
+            },
 
-        // Join on companies
-        {
-            $lookup: {
-                from: "companies",
-                localField: "company",
-                foreignField: "_id",
-                as: "comp"
-            }
-        },
-
-        {
-            $unwind: {
-                path: "$comp",
-                preserveNullAndEmptyArrays: true 
-            }
-        },
-
-        {
-            $match: {
-                $expr: { $ne: ["$acc.fullName", "Admin Master"]}
-            }
-        },
-
-        {
-            $project: {
-                _id: 0,
-                createdDate: {$toDate: "$createdAt"},
-                ref: "$reference",
-                agent : {$first: "$acc.fullName"},
-                requestBy: "$agent.fullName",
-                company: "$comp.name",
-                guest: "$clientName",
-                duration: {$toInt: "$availability.expectedDuration"},
-                checkIn: {$toDate: "$availability.checkIn"},
-                checkOut: {$toDate: "$availability.checkOut"},
-                averageAirbnbPrice: "$averageAirbnbPrice",
-                status: "$status",
-                isExtension: { $cond: [
-                { $regexMatch: { input: "$reference", regex: "EXT" } },
-                true, false
-            ] },
-                accessibility: "$request.propertyPreferences.isAccessibilityRequired",
-            } 
-        },  
-               
+            {
+                $project: {
+                    _id: 0,
+                    createdDate: { $toDate: "$createdAt" },
+                    ref: "$reference",
+                    assignedTo: "$firstAccount.fullName", // Guaranteed to be the 1st assigned person
+                    requestBy: "$agent.fullName",
+                    company: "$comp.name",
+                    guest: "$clientName",
+                    duration: { $toInt: "$availability.expectedDuration" },
+                    checkIn: { $toDate: "$availability.checkIn" },
+                    checkOut: { $toDate: "$availability.checkOut" },
+                    averageAirbnbPrice: "$averageAirbnbPrice",
+                    status: "$status",
+                    isExtension: { 
+                        $cond: [
+                            { $regexMatch: { input: "$reference", regex: "EXT" } },
+                            true, 
+                            false
+                        ] 
+                    },
+                    accessibility: "$request.propertyPreferences.isAccessibilityRequired",
+                    "First Offer Date": { $first: "$offer.createdAt" },
+                    "Latest Offer Date": { $last: "$offer.createdAt" },
+                    "Offered Multiple Times": { 
+                        $cond: [ 
+                            { $eq: [ { $first: "$offer.createdAt" }, { $last: "$offer.createdAt" } ] }, 
+                            false, 
+                            true 
+                        ] 
+                    }
+                } 
+            }       
         ]).sort({ createdDate: 1, guest: 1 }).toArray();
 
         console.log(existing_enqs)
@@ -153,7 +171,7 @@ async function run() {
             console.log(`Successfully exported ${existing_enqs.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
-                console.error("ERROR: File is locked. Please close 'enquiries.xlsx' in Excel and try again.");
+                console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");
             } else {
                 console.error("ERROR during export:", err.message);
             }

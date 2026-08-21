@@ -70,10 +70,34 @@ async function run() {
             }
         },
 
+
         { $unwind: { path: "$cpAll", preserveNullAndEmptyArrays: false } },
 
         { $match: { "cpAll.status": {$in: ["offeredOut"]} } },
 
+        {
+            $addFields: {
+                firstAssignedAccountId: { $first: "$assigned.account" }
+            }
+        },
+
+          
+        {
+            $lookup: {
+                from: "accounts",
+                localField: "firstAssignedAccountId",
+                foreignField: "_id",
+                as: "firstAccount"
+            }
+        }, 
+
+        {
+            $unwind: {
+                path: "$firstAccount",
+                preserveNullAndEmptyArrays: true
+            }
+        },         
+        
         // Property ranking
         {
             $setWindowFields: {
@@ -87,6 +111,42 @@ async function run() {
             }
         },
         
+        {
+            $lookup: {
+                from: "companies",
+                localField: "company",
+                foreignField: "_id",
+                as: "supplier"
+            }
+        },
+
+        { $unwind: "$supplier"},
+
+        {
+            $lookup: {
+                from: "companies",
+                let: { rootCommissionId: "$commission" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                // Matches root commission ID against the _id inside the commission array
+                                $in: ["$$rootCommissionId", "$commission._id"]
+                            }
+                        }
+                    }
+                ],
+                as: "commissionDoc"
+            }
+        },
+
+        { 
+            $unwind: { 
+                path: "$commissionDoc", 
+                preserveNullAndEmptyArrays: true 
+            } 
+        },
+
         {
             $lookup: {
                 from: "accounts",
@@ -244,7 +304,7 @@ async function run() {
         {
             $lookup: { 
                 from: "accounts", 
-                localField: "assigned", 
+                localField: "assigned.account", 
                 foreignField: "_id", 
                 as: "acc" 
             }
@@ -347,18 +407,24 @@ async function run() {
         {
             $addFields: {
                 cancellationPolicy: {
-                    $convert: {
-                        input: {
-                            $getField: {
-                                field: "match",
-                                input: {$regexFind: { input: "$prop.cancellationType", regex: /\d+/ }}
+                    $cond: [
+                        { $regexMatch : { input: "$prop.cancellationType", regex: /\d+/ } },
+                        { $convert: {
+                            input: {
+                                $getField: {
+                                    field: "match",
+                                    input: {$regexFind: { input: "$prop.cancellationType", regex: /\d+/ }}
+                                }
+                            },
+                            to: "int",
+                            onError: null,
+                            onNull: null
                             }
                         },
-                        to: "int",
-                        onError: null,
-                        onNull: null
-                    }
+                        "$prop.cancellationType" 
+                    ]
                 }
+
             }
         },
 
@@ -376,49 +442,107 @@ async function run() {
             offeredDate: {$toDate: "$cpAll.createdAt" },
             ref: "$reference",
             agent: "$agent.fullName",
-            assignedTo: "$acc.fullName",
+            assignedTo: "$firstAccount.fullName",
             addedBy: "$addedBy.fullName",
             approvedBy: "$approvedBy.fullName",
-            client: "$client.fullName",
+            supplier: "$supplier.name",
+            guest: "$client.fullName",
             checkIn: "$availability.checkIn",
             checkOut: "$availability.checkOut",
-            duration: {$toInt: "$availability.expectedDuration"},
             numOfPets: "$request.propertyPreferences.totalPets",
             numOfParking: "$request.propertyPreferences.parking.spaces",
-            parkingType: "$prop.parkingType.value",
-            avgAirbnbPrice: {$ifNull: ["$averageAirbnbPrice", 0]},       
+            parkingType: "$prop.parkingType.value",     
             enquiryStatus: "$status",
             propName: "$prop.name",
             propPostcode: "$prop.address.zip",
             homePostcode: "$address.zip",
-            distanceinMi:"$distanceMi",
-            distanceinKm: "$distanceKm",
             landlordName: "$landlords.displayName",
             company : "$landlords.company.name",
             landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } }, 
             landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
-            landlordRate: "$cpAll.costs.nightlyRate.amount",
             cancellation: "$cancellationPolicy",
-            propMargin: { $divide: ["$cpAll.costs.margin.amount", 100]},
+            duration: {$toInt: "$availability.expectedDuration"},
+            supply: "$supply",
+            distanceinMi:"$distanceMi",
+            distanceinKm: "$distanceKm",
+            avgAirbnbPrice: {$ifNull: ["$averageAirbnbPrice", 0]},  
+            airbnbRate: { $ifNull: ["$cpAll.airbnbCost","N/A"] } ,
+            landlordRate: "$cpAll.costs.nightlyRate.amount",
+            propMargin: { $divide: ["$cpAll.costs.margin.amount", 100] },
             mhiyRate: {
                 $multiply: [
                     "$cpAll.costs.nightlyRate.amount",
                     { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
                 ]
             },
-            icabRate: {
-                $round: [
-                    {
-                        $multiply: [{
-                            $multiply: [
-                            "$cpAll.costs.nightlyRate.amount",
-                            { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                                ]
-                        }, 1.15]
+
+            supplierCommission: {
+                $let: {
+                    vars: {
+                        // Find the single matching commission object from the array
+                        matchedComm: {
+                            $first: {
+                                $filter: {
+                                    input: { $ifNull: ["$commissionDoc.commission", []] },
+                                    as: "c",
+                                    cond: { $eq: ["$$c._id", "$commission"] }
+                                }
+                            }
+                        }
                     },
-                2]
-            }, 
-            
+                    in: { $toDouble: { $ifNull: ["$$matchedComm.rate", 0] } }
+                }
+            },
+
+            supplierRate: {
+                $let: {
+                    vars: {
+                        rateVal: {
+                            $toDouble: {
+                                $ifNull: [
+                                    {
+                                        $getField: {
+                                            field: "rate",
+                                            input: {
+                                                $first: {
+                                                    $filter: {
+                                                        input: { $ifNull: ["$commissionDoc.commission", []] },
+                                                        as: "c",
+                                                        cond: { $eq: ["$$c._id", "$commission"] }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            }
+                        }
+                    },
+                    in: {
+                        $cond: [
+                            { $gt: ["$$rateVal", 0] },
+                            {
+                                $round: [
+                                    {
+                                        $divide: [
+                                            {
+                                                $multiply: [
+                                                    "$cpAll.costs.nightlyRate.amount",
+                                                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                                ]
+                                            },
+                                            "$$rateVal"
+                                        ]
+                                    },
+                                    2
+                                ]
+                            },
+                            null
+                        ]
+                    }
+                }
+            },
             pet: "$cpAll.costs.petFee.amount",
             landlordPet: "$cpAll.costs.petFee.landlordShare",
             parking: "$cpAll.costs.parking.amount",
@@ -429,7 +553,6 @@ async function run() {
             landlordExitClean: "$cpAll.costs.exitClean.landlordShare",
             deposit: "$cpAll.costs.deposit.amount",
             petDeposit: "$cpAll.costs.petDeposit.amount",
-            supply: "$supply",
             accessibility: "$request.propertyPreferences.isAccessibilityRequired",
             isBooking: "$isBooking",
             isPropertyBooked: "$isPropertyBooked",
@@ -492,7 +615,7 @@ async function run() {
             console.log(`Successfully exported ${enqs_vs_bookings.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
-                console.error("ERROR: File is locked. Please close 'enquiries.xlsx' in Excel and try again.");
+                console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");
             } else {
                 console.error("ERROR during export:", err.message);
             }

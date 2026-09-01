@@ -30,7 +30,6 @@ async function run() {
             {
                 $match: {
                     isDeleted: false,
-                    status: { $nin: ["cancelled"] },
                     createdAt: {$gte: start}
                 }
             },

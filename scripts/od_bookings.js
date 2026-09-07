@@ -38,10 +38,15 @@ async function run() {
                 }
             },
 
-            { $unwind: { 
-                path: "$enq",
-                preserveNullAndEmptyArrays: true
-                } },
+            
+
+            { 
+                $unwind: { 
+                    path: "$enq",
+                    preserveNullAndEmptyArrays: true
+                } 
+            },
+
             // Joining accounts to get assigned booker
             { $lookup:
                 {
@@ -140,6 +145,21 @@ async function run() {
                 }
             },
 
+            { 
+                $addFields: {
+                    firstAssigned: {$first: "$client.assigned"}
+                }
+            },
+
+            { $lookup: 
+                {
+                    from: "accounts",
+                    localField: "firstAssigned",
+                    foreignField: "_id",
+                    as: "gcFallback"
+                }
+            },
+
             // Left join on companies collection
             { $lookup:
                 {
@@ -198,14 +218,14 @@ async function run() {
                     }
                 }
             },
-            
+
             { 
                 $project: {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
                     createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
-                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
+                    gcAssignedTo: {$ifNull: [{$first: "$gcFallback.fullName"}, {$first: "$gcAssigned.fullName"}, "unassigned"]},
                     enqAssignedTo: {$last: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},

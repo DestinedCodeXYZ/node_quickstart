@@ -110,7 +110,8 @@ async function run() {
                     liveExtLink: "$livePropertyLink",
                     landlordName: "$landlords.displayName",
                     landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
-                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },    
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
+                    company: "$landlords.company.name",    
                     parkingFlag:  {
                         $expr: {
                             $or: [

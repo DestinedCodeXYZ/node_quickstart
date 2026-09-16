@@ -466,7 +466,7 @@ async function run() {
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
             avgAirbnbPrice: {$ifNull: ["$averageAirbnbPrice", 0]},  
-            airbnbRate: { $ifNull: ["$cpAll.airbnbCost","N/A"] } ,
+            airbnbRate: { $ifNull: ["$cpAll.airbnbCost", 0] } ,
             landlordRate: "$cpAll.costs.nightlyRate.amount",
             propMargin: { $divide: ["$cpAll.costs.margin.amount", 100] },
             mhiyRate: {
@@ -522,23 +522,14 @@ async function run() {
                     in: {
                         $cond: [
                             { $gt: ["$$rateVal", 0] },
-                            {
-                                $round: [
-                                    {
-                                        $divide: [
-                                            {
-                                                $multiply: [
-                                                    "$cpAll.costs.nightlyRate.amount",
-                                                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                                                ]
-                                            },
-                                            "$$rateVal"
-                                        ]
-                                    },
-                                    2
-                                ]
-                            },
-                            null
+                            { $round: [{
+                                $divide: [{
+                                    $multiply: [
+                                        "$cpAll.costs.nightlyRate.amount",
+                                        { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                    ]},"$$rateVal"
+                                ]}, 2
+                            ]}, null
                         ]
                     }
                 }

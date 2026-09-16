@@ -112,8 +112,8 @@ async function run() {
                         ] 
                     },
                     accessibility: "$request.propertyPreferences.isAccessibilityRequired",
-                    "First Offer Date": { $first: "$offer.createdAt" },
-                    "Latest Offer Date": { $last: "$offer.createdAt" },
+                    "First Offer Date": { $last: "$offer.createdAt" },
+                    "Latest Offer Date": { $first: "$offer.createdAt" },
                     "Offered Multiple Times": { 
                         $cond: [ 
                             { $eq: [ { $first: "$offer.createdAt" }, { $last: "$offer.createdAt" } ] }, 

@@ -173,7 +173,8 @@ async function run() {
             { $unwind: { 
                 path: "$comp",
                 preserveNullAndEmptyArrays: true
-                } },
+                } 
+            },
 
             { $lookup:
                 {

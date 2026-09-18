@@ -250,14 +250,8 @@ async function run() {
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
                     mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", { $divide: ["$pricing.info.mhiyCommission", 100] } ] },
                     expectedYield: { $multiply: [
-                            { $subtract: [
-                                { $multiply: 
-                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
-                                },
-                                "$pricing.info.landlordRate"
-                                ] 
-                            },
-                            {$toInt: "$expectedDuration"} 
+                        "$pricing.info.landlordRate" , { $divide: [ "$pricing.info.mhiyCommission", 100 ] },      
+                        {$toInt: "$expectedDuration"} 
                         ]
                     },
 

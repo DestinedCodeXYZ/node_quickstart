@@ -98,7 +98,8 @@ async function run() {
                     assignedTo: "$firstAccount.fullName", // Guaranteed to be the 1st assigned person
                     requestBy: "$agent.fullName",
                     company: "$comp.name",
-                    guest: "$clientName",
+                    guest: { $ifNull: [{ $concat: ["$guest.firstName", " ", "$guest.lastName"] },
+                        "$clientName" ]},
                     duration: { $toInt: "$availability.expectedDuration" },
                     checkIn: { $toDate: "$availability.checkIn" },
                     checkOut: { $toDate: "$availability.checkOut" },

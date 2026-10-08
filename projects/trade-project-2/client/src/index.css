@@ -109,3 +109,14 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+ul {
+  list-style-type: none;
+}
+
+.candleData {
+  display: flex;
+  justify-content: center;
+  margin: 10px
+}
+

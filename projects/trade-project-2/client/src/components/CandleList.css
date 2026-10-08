@@ -1,0 +1,19 @@
+table {
+    border: 50px;
+    border-color:rgb(197, 123, 123);
+    margin: 10px;
+    outline: auto;
+    outline-color: black;
+
+}
+
+table tr {
+    margin: 30px;
+    
+    border: 20px;
+    color:rgb(219, 210, 210);
+}
+
+table td {
+    margin: 30px;
+}

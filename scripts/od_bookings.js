@@ -8,7 +8,7 @@ const path = require('path');
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
@@ -38,10 +38,15 @@ async function run() {
                 }
             },
 
-            { $unwind: { 
-                path: "$enq",
-                preserveNullAndEmptyArrays: true
-                } },
+            
+
+            { 
+                $unwind: { 
+                    path: "$enq",
+                    preserveNullAndEmptyArrays: true
+                } 
+            },
+
             // Joining accounts to get assigned booker
             { $lookup:
                 {
@@ -140,6 +145,21 @@ async function run() {
                 }
             },
 
+            { 
+                $addFields: {
+                    firstAssigned: {$first: "$client.assigned"}
+                }
+            },
+
+            { $lookup: 
+                {
+                    from: "accounts",
+                    localField: "firstAssigned",
+                    foreignField: "_id",
+                    as: "gcFallback"
+                }
+            },
+
             // Left join on companies collection
             { $lookup:
                 {
@@ -153,7 +173,8 @@ async function run() {
             { $unwind: { 
                 path: "$comp",
                 preserveNullAndEmptyArrays: true
-                } },
+                } 
+            },
 
             { $lookup:
                 {
@@ -198,14 +219,14 @@ async function run() {
                     }
                 }
             },
-            
+
             { 
                 $project: {
                     _id: 0,
                     createdAt: {$toDate: "$createdAt"},
                     createdBy: {$first: "$createdBy.fullName"},
                     ref: "$reference",
-                    gcAssignedTo: {$ifNull: [{$first: "$gcAssigned.fullName"}, "unassigned"]},
+                    gcAssignedTo: {$ifNull: [{$first: "$gcFallback.fullName"}, {$first: "$gcAssigned.fullName"}, "unassigned"]},
                     enqAssignedTo: {$last: "$enqAssigned.fullName"},
                     addedBy: {$first: "$addedBy.fullName"},
                     approvedBy:  {$first: "$approvedBy.fullName"},
@@ -247,16 +268,10 @@ async function run() {
                     landlordPrice: "$pricing.info.landlordRate",
                     quoteOutPrice: "$pricing.info.quoteOutPrice",
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
-                    mhiyMarginVal: { $round: [{ $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] }, 2] },
+                    mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", {$divide: ["$pricing.info.mhiyCommission", 100] } ] },
                     expectedYield: { $multiply: [
-                            { $subtract: [
-                                { $multiply: 
-                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
-                                },
-                                "$pricing.info.landlordRate"
-                                ] 
-                            },
-                            {$toInt: "$expectedDuration"} 
+                        "$pricing.info.landlordRate" , { $divide: [ "$pricing.info.mhiyCommission", 100 ] },      
+                        {$toInt: "$expectedDuration"} 
                         ]
                     },
 

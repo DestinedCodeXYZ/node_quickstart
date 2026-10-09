@@ -37,7 +37,7 @@ function parseLonLat(arr) {
 }
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
@@ -466,7 +466,7 @@ async function run() {
             distanceinMi:"$distanceMi",
             distanceinKm: "$distanceKm",
             avgAirbnbPrice: {$ifNull: ["$averageAirbnbPrice", 0]},  
-            airbnbRate: { $ifNull: ["$cpAll.airbnbCost","N/A"] } ,
+            airbnbRate: { $ifNull: ["$cpAll.airbnbCost", 0] } ,
             landlordRate: "$cpAll.costs.nightlyRate.amount",
             propMargin: { $divide: ["$cpAll.costs.margin.amount", 100] },
             mhiyRate: {
@@ -522,23 +522,14 @@ async function run() {
                     in: {
                         $cond: [
                             { $gt: ["$$rateVal", 0] },
-                            {
-                                $round: [
-                                    {
-                                        $divide: [
-                                            {
-                                                $multiply: [
-                                                    "$cpAll.costs.nightlyRate.amount",
-                                                    { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
-                                                ]
-                                            },
-                                            "$$rateVal"
-                                        ]
-                                    },
-                                    2
-                                ]
-                            },
-                            null
+                            { $round: [{
+                                $divide: [{
+                                    $multiply: [
+                                        "$cpAll.costs.nightlyRate.amount",
+                                        { $add: [1, { $divide: ["$cpAll.costs.margin.amount", 100] }] }
+                                    ]},"$$rateVal"
+                                ]}, 2
+                            ]}, null
                         ]
                     }
                 }

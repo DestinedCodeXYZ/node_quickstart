@@ -9,7 +9,7 @@ const { performServerHandshake } = require('http2');
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);

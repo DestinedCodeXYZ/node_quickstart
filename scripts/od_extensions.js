@@ -8,7 +8,7 @@ const path = require('path');
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
@@ -250,14 +250,8 @@ async function run() {
                     mhiyMargin: { $divide: [ "$pricing.info.mhiyCommission", 100] },
                     mhiyMarginVal: { $multiply: ["$pricing.info.landlordRate", { $divide: ["$pricing.info.mhiyCommission", 100] } ] },
                     expectedYield: { $multiply: [
-                            { $subtract: [
-                                { $multiply: 
-                                    [ "$pricing.info.quoteOutPrice", "$pricing.info.companyCommission" ],  
-                                },
-                                "$pricing.info.landlordRate"
-                                ] 
-                            },
-                            {$toInt: "$expectedDuration"} 
+                        "$pricing.info.landlordRate" , { $divide: [ "$pricing.info.mhiyCommission", 100 ] },      
+                        {$toInt: "$expectedDuration"} 
                         ]
                     },
 

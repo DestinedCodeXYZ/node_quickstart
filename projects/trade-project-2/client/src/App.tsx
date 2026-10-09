@@ -6,6 +6,7 @@ import type { Candle } from './types/Candle';
 import CandleList from './components/CandleList';
 import Loading from './components/Loading';
 import IsError from './components/IsError';
+import Analytics from './components/Analytics';
 
 function App() {
 
@@ -82,7 +83,7 @@ function App() {
       <div>
         <button onClick={getData}>Load Candles</button>
       </div>
-      <p> Candles: {candles.length}</p>
+      <div><Analytics candles={candles}/></div>
       <div className="candleData"> 
         {isLoading ? <Loading/> : error ? <IsError error={error}/> : <CandleList candles={candles}/>}
       </div>

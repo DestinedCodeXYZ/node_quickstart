@@ -15,7 +15,7 @@ router.get("/", async (req, res) => {
         const { instrument, timeframe, from, to, limit } = req.query;
 
         // Checking for required params
-        if (!instrument || !timeframe ) {
+        if ( !instrument || !timeframe ) {
             return res.status(400).json({error: "Missing instrument/timeframe"})
         }
 

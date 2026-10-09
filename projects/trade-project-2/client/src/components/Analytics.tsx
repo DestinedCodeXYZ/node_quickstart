@@ -10,7 +10,25 @@ export default function Analytics({candles}: {candles: Candle[]}) {
         return candle.open > candle.close
     });
 
-    for (const candle in candles)
+    const lowestLow = candles.reduce((candle, nextCandle) => {
+       return Math.min(candle, nextCandle.low)
+    }, Infinity);
+
+    const highestHigh = candles.reduce((candle, nextCandle) => {
+       return Math.max(candle, nextCandle.high)
+    }, 0);
+
+    const volAvg = ((candles.reduce((candle, nextCandle) => {
+        return candle + nextCandle.volume
+    }, 0)) / candles.length).toFixed(2)
+
+
+    const avgCandleRange = candles.length === 0 ?
+    0
+    : candles.reduce(
+        (sum, candle) => 
+        sum + (candle.high - candle.low), 0
+    )
 
     return (
         <div>
@@ -18,9 +36,9 @@ export default function Analytics({candles}: {candles: Candle[]}) {
                 <p> Candles: {candles.length}</p>
                 <p> Bullish candles: {bullishCandles.length} - {(bullishCandles.length/candles.length * 100).toFixed(2)}%</p>
                 <p> Bearish candles: {bearishCandles.length} - {(bearishCandles.length/candles.length * 100).toFixed(2)}%</p>
-                
+                <div>Lowest Low: {lowestLow} -- Highest High: {highestHigh}</div>
+                <p>Average volume: {volAvg} <br/> Average range: {avgCandleRange.toFixed(4)} </p>
             </div>
         </div>
-        
     )
 }

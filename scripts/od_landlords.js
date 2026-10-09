@@ -9,7 +9,7 @@ const { performServerHandshake } = require('http2');
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
@@ -54,6 +54,14 @@ async function run() {
                 }
             },
 
+            {
+                $lookup: {
+                    from: "accounts",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "creator"
+                }
+            },
 
             { $addFields:
                 { newLL:
@@ -72,21 +80,65 @@ async function run() {
             {
                 $project: {
                     createdAt: "$createdAt",
+                    createdBy: {$first: "$creator.fullName"},
+                    _id: { $toString: "$_id" },
                     name: "$displayName",
+                    email: { $first: { $first: "$contacts.emailAddresses.email" } },
                     phone1: { $first : { $first: "$contacts.phoneNumbers.phone" } },
                     phone2: { $ifNull: [ {$arrayElemAt: ["$phoneNumbers.phone", 1] } , "N/A" ]},
-                    email: { $first: { $first: "$contacts.emailAddresses.email" } },
                     "Company Name" : "$company.name",
                     "Company URL" : "$company.url",
                     "Size" : "$size",
                     "Ownership" : "$ownership",
                     "Traffic light system" : "$trafficLightSystem",
-                    "No of Listings on Orbit" : "$numberOfListings",
+                    "No of Listings on Airbnb" : {$ifNull: ["$numberOfListings", 0]},
                     "No of Bookings" : {$ifNull: ["$historicalBookings", 0]},
                     "Is Verified" : {$ifNull: [{$first: "$checklist.isLandlordVerified"}, false]},
-                    "Is Email Suppressed" : {$first: "$checklist.isEmailSuppressed"},
+                    "Is Email Suppressed" : {$ifNull: [{$first: "$checklist.isEmailSuppressed"}, false]},
                     "Verified By" : {$first: "$verifier.fullName"},
-                    _id: { $toString: "$_id" },
+                    "WhatsApp Number?": "$contactNumber.isWhatsapp",
+                    externalLink: {
+                        $cond: [
+                            {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: { $ifNull: ["$externalProfiles", []] },
+                                                as: "profile",
+                                                cond: {
+                                                    $regexMatch: {
+                                                        input: { $trim: { input: "$$profile.platform" } },
+                                                        // Matches "airbnb" or "direct" ignoring case/spaces
+                                                        regex: /^(airbnb|direct)$/i 
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            // If a match is found, extract the URL of that matched profile
+                            {
+                                $first: {
+                                    $map: {
+                                        input: {
+                                            $filter: {
+                                                input: "$externalProfiles",
+                                                as: "profile",
+                                                cond: { $regexMatch: { input: { $trim: { input: "$$profile.platform" } }, regex: /^(airbnb|direct)$/i } }
+                                            }
+                                        },
+                                        as: "matched",
+                                        in: "$$matched.url"
+                                    }
+                                }
+                            },
+                            // If no match is found, return null
+                            null
+                        ]
+                    },
                     newLL: "$newLL"
                 }
             },

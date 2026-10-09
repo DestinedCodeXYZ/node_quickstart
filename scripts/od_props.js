@@ -8,7 +8,7 @@ const path = require('path');
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
@@ -53,12 +53,13 @@ async function run() {
                 {  
                     name: "$name",
                     createdAt: "$createdAt", 
-                    
-
                     longitude: {$arrayElemAt: ["$address.position.coordinates", 0]},
                     latitude: {$arrayElemAt: ["$address.position.coordinates", 1]},
                     postcode: "$address.zip",
                     fullAddress: "$address.freeFormAddress",
+                    units: {$cond: [
+                        {$in: ["$numberOfUnits", [null, 0]]}, 1, "$numberOfUnits"
+                    ]},
                     bedrooms: "$numberOfBedrooms",
                     beds: {
                         $subtract: [
@@ -109,7 +110,8 @@ async function run() {
                     liveExtLink: "$livePropertyLink",
                     landlordName: "$landlords.displayName",
                     landlordEmail: { $first: { $first: "$landlords.contacts.emailAddresses.email" } },
-                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },    
+                    landlordPhone: { $first: { $first: "$landlords.contacts.phoneNumbers.phone" } },
+                    company: "$landlords.company.name",    
                     parkingFlag:  {
                         $expr: {
                             $or: [

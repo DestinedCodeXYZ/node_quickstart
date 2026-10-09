@@ -7,11 +7,11 @@ const path = require('path');
 
 require('dotenv').config({path: path.join(__dirname, '../.env')});
 // url for connecting to cluster.
-const url = "mongodb+srv://kevronthe5th:PGY7fZFoSWqaYUif@axi-digital.oleo1.mongodb.net/myhomeisyours-live?retryWrites=true&w=majority&appName=Axi-Digital"
+const url = process.env.DB_PASS
 
 // Connecting to mhiy DB (axi-digital.oleo1.mongodb.net)
 const client  = new MongoClient(url);
-const start = new Date(Date.UTC(2025, 9, 1));
+const start = new Date(Date.UTC(2025, 8, 1));
 
 // Query for all existing enquiries on db
 async function run() {
@@ -30,7 +30,6 @@ async function run() {
             {
                 $match: {
                     isDeleted: false,
-                    status: { $nin: ["cancelled"] },
                     createdAt: {$gte: start}
                 }
             },
@@ -39,7 +38,7 @@ async function run() {
             {
                 $lookup: {
                     from: "accounts",
-                    localField: "assigned",
+                    localField: "assigned.account",
                     foreignField: "_id",
                     as: "acc"
                 }
@@ -154,6 +153,12 @@ async function run() {
                 }
             },
 
+            {
+                $match: {
+                    earliestOffer: { $ne: null }
+                }
+            },
+            
             // 6. Business Hour Configuration & Calculations
             {
                 $addFields: {
@@ -257,7 +262,7 @@ async function run() {
                                 "Company" : "$comp.name",
                                 "Status" : "$status",
                                 "Latest Cycle": {$last: "$sortedCycles.cycle"},
-                                "Agent": { $first: "$acc.fullName" },
+                                "Assigned To": { $first: "$acc.fullName" },
                                 "Business Duration": {
                                     $concat: [
                                         { $toString: { $floor: { $divide: ["$totalSecs", 86400] } } },
@@ -267,7 +272,10 @@ async function run() {
                                 },
                                 "Business Hours": "$businessHours",
                                 "Duration Band": "$durationBand",
-                                isExtension: "$extension.isExtension"
+                                isExtension: { $cond: [
+                                    { $regexMatch: { input: "$reference", regex: "EXT" } },
+                                    true, false
+                                ] },
                             }
                         }
                     ],
@@ -327,7 +335,7 @@ async function run() {
             console.log(`Successfully exported ${facetedData.enquiryList.length} rows to: ${finalPath}`);
         } catch (err) {
             if (err.code === 'EBUSY') {
-                console.error("ERROR: File is locked. Please close 'RAW_DATA' in Excel and try again.");
+                console.error("ERROR: File is locked. Please close 'RAW_DATA.xlsx' in Excel and try again.");
             } else {
                 console.error("ERROR during export:", err.message);
             }

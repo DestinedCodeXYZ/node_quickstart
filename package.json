@@ -14,7 +14,7 @@
     "dotenv": "^17.3.1",
     "exceljs": "^4.4.0",
     "mongodb": "6.17",
-    "mongoose": "^9.2.4",
+    "mongoose": "^9.6.2",
     "nodejs": "^0.0.0",
     "xlsx": "^0.18.5"
   },

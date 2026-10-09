@@ -1,3 +1,4 @@
+
 table {
     border-collapse: collapse;
     border-radius: 30px;
@@ -5,6 +6,7 @@ table {
     outline: 4px solid black;
     width: max-content;
     min-width: 100%;
+    overflow: hidden;
 }
 
 th,
@@ -26,8 +28,4 @@ td:first-child {
 
 tr:nth-child(even) {
     background-color: rgba(177, 101, 228, 0.678);
-}
-
-tr:last-child{
-    margin-bottom: 20px
 }

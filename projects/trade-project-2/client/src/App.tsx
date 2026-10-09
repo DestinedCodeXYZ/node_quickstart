@@ -5,6 +5,7 @@ import { fetchData } from './functions/fetchData';
 import type { Candle } from './types/Candle';
 import CandleList from './components/CandleList';
 import Loading from './components/Loading';
+import IsError from './components/IsError';
 
 function App() {
 
@@ -83,7 +84,7 @@ function App() {
       </div>
       <p> Candles: {candles.length}</p>
       <div className="candleData"> 
-        {isLoading ? <Loading/> : <CandleList candles={candles}/>}
+        {isLoading ? <Loading/> : error ? <IsError error={error}/> : <CandleList candles={candles}/>}
       </div>
     </>
   )

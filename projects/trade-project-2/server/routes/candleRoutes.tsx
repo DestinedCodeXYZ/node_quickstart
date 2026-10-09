@@ -23,7 +23,6 @@ router.get("/", async (req, res) => {
             return res.status(400).json({error: "Invalid query parameters"})
         }
 
-
         const filter: QueryFilter<Candle> = {};
 
         // Checking for optional params
@@ -75,8 +74,6 @@ router.get("/", async (req, res) => {
             
             queryLimit = parsedLimit;
         }
-
-        
 
         console.log("1. Route reached.");
 

@@ -14,15 +14,13 @@ export default function CandleList({candles}: {candles: Candle[] }) {
                 <th>Volume</th>
             </tr>
         {candles.map((candle) => (
-            <tr>
-                <>
-                    <td key={candle._id}>{candle.timestamp}</td> 
-                    <td key={candle._id}>{candle.open}</td> 
-                    <td key={candle._id}>{candle.high}</td>
-                    <td key={candle._id}>{candle.low}</td>
-                    <td key={candle._id}>{candle.close}</td>
-                    <td key={candle._id}>{candle.volume}</td>
-                </> 
+            <tr key={candle._id}>
+                <td >{candle.timestamp}</td> 
+                <td >{candle.open}</td> 
+                <td >{candle.high}</td>
+                <td >{candle.low}</td>
+                <td >{candle.close}</td>
+                <td >{candle.volume}</td>
             </tr>
         ))}
         </table>

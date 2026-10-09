@@ -1,19 +1,29 @@
 table {
-    border: 50px;
-    border-color:rgb(197, 123, 123);
-    margin: 10px;
-    outline: auto;
-    outline-color: black;
-
+    border-collapse: collapse;
+    border-radius: 30px;
+    background-color: rgba(92, 16, 155, 0.22);
+    outline: 4px solid black;
+    width: max-content;
+    min-width: 100%;
 }
 
-table tr {
-    margin: 30px;
-    
-    border: 20px;
-    color:rgb(219, 210, 210);
+th,
+td {
+    padding: 8px 12px;
+    white-space: nowrap;
+    shape-margin: 30px;
+    border-bottom: 2px solid black;
 }
 
-table td {
-    margin: 30px;
+td:hover {
+    background-color: rgba(13, 153, 109, 0.678);
+}
+
+th:first-child,
+td:first-child {
+    text-align: center;
+}
+
+tr:nth-child(even) {
+    background-color: rgba(177, 101, 228, 0.678);
 }

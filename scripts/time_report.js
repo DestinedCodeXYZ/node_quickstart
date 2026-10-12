@@ -240,8 +240,8 @@ async function run() {
                     durationBand: {
                         $switch: {
                             branches: [
-                                { case: { $lte: ["$totalBusinessMinutes", 60] }, then: "<=1hr" },
-                                { case: { $and: [{ $gt: ["$totalBusinessMinutes", 60] }, { $lte: ["$totalBusinessMinutes", 240] }] }, then: "1 - 4hrs" },
+                                { case: { $lte: ["$totalBusinessMinutes", 120] }, then: "<=2hrs" },
+                                { case: { $and: [{ $gt: ["$totalBusinessMinutes", 120] }, { $lte: ["$totalBusinessMinutes", 240] }] }, then: "2 - 4hrs" },
                                 { case: { $and: [{ $gt: ["$totalBusinessMinutes", 240] }, { $lte: ["$totalBusinessMinutes", 480] }] }, then: "4 - 8hrs" }
                             ],
                             default: ">8hrs"

@@ -7,6 +7,7 @@ import CandleList from './components/CandleList';
 import Loading from './components/Loading';
 import IsError from './components/IsError';
 import Analytics from './components/Analytics';
+import type { WebState } from './types/WebState';
 
 function App() {
 
@@ -15,10 +16,8 @@ function App() {
   const [from, setFrom] = useState('2017-01-01T00:00');
   const [to, setTo] = useState('2017-01-02T00:00');
   const [limit, setLimit] = useState(100);
-  const [candles, setCandles] = useState<Candle[]>([]);
 
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [webState, setWebState] = useState<WebState>({state: "loading"});
 
   const url = new URL("http://localhost:3000/api/candles");
   url.searchParams.set("instrument", instrument);
@@ -38,25 +37,21 @@ function App() {
 
   async function getData() {
 
-    setIsLoading(true);
-    setError(null);
+    setWebState({ state: "loading" })
 
     try {
       const data = await fetchData(url.toString());
-      setCandles(data);
+      setWebState({ state: "success", candles: data});
     }
 
     catch (err) {
       console.log(`ERROR: ${err}`)
       if (err instanceof Error) {
-        setError(err.message);
+        setWebState({state: "error", message: err.message});
       }
 
       else (console.log("An unknown error has occurred."))
     }
-
-    finally { setIsLoading(false) }
-
   }
 
   useEffect(() => {
@@ -83,9 +78,9 @@ function App() {
       <div>
         <button onClick={getData}>Load Candles</button>
       </div>
-      <div><Analytics candles={candles}/></div>
+      <div>{webState.state === "success" ? <Analytics candles={webState.candles}/> : <Analytics candles={[]}/>}</div>
       <div className="candleData"> 
-        {isLoading ? <Loading/> : error ? <IsError error={error}/> : <CandleList candles={candles}/>}
+        {webState.state === "loading" ? <Loading/> : webState.state === "error" ? <IsError error={webState.message}/> : <CandleList candles={webState.candles}/>}
       </div>
     </>
   )

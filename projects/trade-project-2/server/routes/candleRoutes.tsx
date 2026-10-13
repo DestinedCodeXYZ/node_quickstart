@@ -111,11 +111,11 @@ router.get("/:instrument/:timeframe/:id", async (req, res) => {
     const { instrument, timeframe, id } = req.params;
 
     if (!instrument || !timeframe || !id) {
-        res.status(400).json({ error: "Missing parameter(s)"})
+        return res.status(400).json({ error: "Missing parameter(s)"})
     }
 
     if (!mongoose.isValidObjectId(id)) {
-        res.status(400).json({ error: "Invalid id"})
+        return res.status(400).json({ error: "Invalid id"})
     }
 
     console.log("1. Route reached.");

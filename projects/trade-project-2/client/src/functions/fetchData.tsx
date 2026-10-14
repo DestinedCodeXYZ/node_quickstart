@@ -15,6 +15,6 @@ export async function fetchData(url: string) {
         
     catch (err) {
         console.log(`Error fetching data: ${err}`);
-        throw new Error(`Fetch error:${err}`);
+        throw new Error(`Fetch error: ${err}`);
     }
 }

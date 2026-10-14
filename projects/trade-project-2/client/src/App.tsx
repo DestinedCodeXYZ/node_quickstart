@@ -2,22 +2,24 @@ import { useEffect, useState } from 'react'
 import Filter from './components/Filters';
 import './App.css'
 import { fetchData } from './functions/fetchData';
-import type { Candle } from './types/Candle';
 import CandleList from './components/CandleList';
 import Loading from './components/Loading';
 import IsError from './components/IsError';
 import Analytics from './components/Analytics';
-import type { WebState } from './types/WebState';
+import type { CandleState } from './types/CandleState';
+import Login from './components/Login';
 
 function App() {
 
+  // Filter inputs
   const [instrument, setInstrument] = useState('eurusd');
   const [timeframe, setTimeFrame] = useState('h1');
   const [from, setFrom] = useState('2017-01-01T00:00');
   const [to, setTo] = useState('2017-01-02T00:00');
   const [limit, setLimit] = useState(100);
 
-  const [webState, setWebState] = useState<WebState>({state: "loading"});
+  const [candleState, setCandleState] = useState<CandleState>({state: "loading"});
+  const [auth, setAuth] = useState(false)
 
   const url = new URL("http://localhost:3000/api/candles");
   url.searchParams.set("instrument", instrument);
@@ -37,20 +39,17 @@ function App() {
 
   async function getData() {
 
-    setWebState({ state: "loading" })
+    setCandleState({ state: "loading" })
 
     try {
       const data = await fetchData(url.toString());
-      setWebState({ state: "success", candles: data});
+      setCandleState({ state: "success", candles: data});
     }
 
     catch (err) {
       console.log(`ERROR: ${err}`)
-      if (err instanceof Error) {
-        setWebState({state: "error", message: err.message});
-      }
-
-      else (console.log("An unknown error has occurred."))
+      const message = err instanceof Error ? err.message : "An unknown error has occured."
+      setCandleState({state: "error", message})
     }
   }
 
@@ -78,10 +77,11 @@ function App() {
       <div>
         <button onClick={getData}>Load Candles</button>
       </div>
-      <div>{webState.state === "success" ? <Analytics candles={webState.candles}/> : <Analytics candles={[]}/>}</div>
+      <div>{candleState.state === "success" && <Analytics candles={candleState.candles}/>}</div>
       <div className="candleData"> 
-        {webState.state === "loading" ? <Loading/> : webState.state === "error" ? <IsError error={webState.message}/> : <CandleList candles={webState.candles}/>}
+        {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && <CandleList candles={candleState.candles}/>}
       </div>
+      
     </>
   )
 }

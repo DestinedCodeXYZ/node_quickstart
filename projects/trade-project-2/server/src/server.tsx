@@ -23,13 +23,18 @@ app.use(cors({
 
 app.use(express.json());
 
-console.log("Mounting candle router")
-app.use("/api/candles", candleRoutes);
-
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()}: ${req.method} ${req.url}`)
     next();
 })
+
+
+
+console.log("Mounting candle router")
+
+app.use("/api/candles", candleRoutes);
+
+
 
 async function startServer() {
     const databaseURI = process.env.DB_URI;

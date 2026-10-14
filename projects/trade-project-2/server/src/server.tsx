@@ -5,6 +5,7 @@ import cors from 'cors';
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import candleRoutes from "../routes/candleRoutes.js"
+import loginRoute from "../routes/loginRoute.js";
 
 dotenv.config({
   path: resolve(
@@ -28,9 +29,11 @@ app.use((req, res, next) => {
     next();
 })
 
+console.log("Mounting login router");
 
+app.use("/api/auth/login", loginRoute);
 
-console.log("Mounting candle router")
+console.log("Mounting candle router");
 
 app.use("/api/candles", candleRoutes);
 

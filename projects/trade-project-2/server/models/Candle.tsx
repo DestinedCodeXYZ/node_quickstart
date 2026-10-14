@@ -64,4 +64,4 @@ export function getCandleCollection( collectionName: string ): mongoose.Model<Ca
         mongoose.models[collectionName] as mongoose.Model<Candle> ||
         mongoose.model<Candle>(collectionName, candleSchema, collectionName)
     )
-}
+} 

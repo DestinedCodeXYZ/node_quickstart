@@ -23,3 +23,10 @@ export const userSchema = new mongoose.Schema<User> ({
         required: true
     }
 })
+
+export function getUserModel(): mongoose.Model<User> {
+    return (
+        mongoose.models.User as mongoose.Model<User> ||
+        mongoose.model<User>("User", userSchema, "users")
+    );
+}

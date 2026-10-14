@@ -13,16 +13,6 @@ dotenv.config({
   )
 });
 
-function hashPassword(password: string, salt: string) {
-
-    
-    
-}
-
-function generateSalt() {
-    
-}
-
 const password = "test";
 const saltRounds = 10;
 
@@ -37,8 +27,6 @@ bcrypt.hash(password, saltRounds, function (err, hash) {
     console.log(hash)
     hashedPassword = hash;
 }) 
-
-
 
 async function createTestUser() {
     try {

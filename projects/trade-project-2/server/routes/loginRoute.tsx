@@ -44,7 +44,7 @@ router.post("/", async (req, res) => {
             return res.status(401).json({error: "Invalid user/password"})
         }
         
-        res.status(200).json({message: "Password accepted."})
+        res.status(200).json({username: `${user.username}`})
     }
 
     catch(err) {

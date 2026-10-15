@@ -1,0 +1,11 @@
+form {
+    justify-content: center;
+    display: inline-block;
+    width: 400px;
+    height: 80px;
+    margin: 10px;
+    outline: auto rgb(201, 169, 241);
+    border-radius: 20px;
+    background: linear-gradient(to right, #1b1933c9, #5a23b3);
+    padding: 20px
+}

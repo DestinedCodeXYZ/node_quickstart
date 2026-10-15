@@ -14,7 +14,7 @@ import { handleLogin } from "./functions/handleLogin";
 import './App.css'
 import type { CandleState } from './types/CandleState';
 import type { AuthState } from './types/AuthState';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 
 function App() {
@@ -58,7 +58,7 @@ function App() {
     }
 
     catch (err) {
-      console.log(`ERROR: ${err}`)
+      console.log(`${err}`)
       const message = err instanceof Error ? err.message : "An unknown error has occured."
       setCandleState({state: "error", message})
     }
@@ -69,25 +69,22 @@ function App() {
     setAuth({state: "loading"});
 
     try {
-        const data = await handleLogin(loginUrl.toString(), username, password);
+        await handleLogin(loginUrl.toString(), username, password);
         setAuth({state: "success", username: username})
+        getData();
     } 
     
     catch(err) {
-      console.log(`ERROR: ${err}`)
+      console.log(`${err}`)
       const message = err instanceof Error ? err.message : "An unknown error has occured."
       setAuth({state: "error", message})
     }
   }
 
-  useEffect(() => {
-      getData()
-  }, [])
-
   return (
     <>
-    <h1>Market Data Explorer</h1>
-    {auth.state === "loading" ? <Login onLogin={loginAuth}/> :
+    <h1><b>Market Data Explorer</b></h1>
+    {auth.state !== "success" ? <Login onLogin={loginAuth}/> :
     
     <div>
       <div>

@@ -19,6 +19,6 @@ export async function handleLogin(url: string, user: string, pass: string) {
         return data;
 
     } catch(err) {
-        throw new Error(`Fetch error: ${err}`)
+        throw new Error(`${err}`)
     }
 }

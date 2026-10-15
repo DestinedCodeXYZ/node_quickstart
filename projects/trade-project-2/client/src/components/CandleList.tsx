@@ -1,5 +1,5 @@
 import type { Candle } from '../types/Candle';
-import './CandleList.css';
+import '../cosmetics/CandleList.css';
 
 export default function CandleList({candles}: {candles: Candle[] }) {
 
@@ -7,23 +7,27 @@ export default function CandleList({candles}: {candles: Candle[] }) {
         <div className="candleTableFrame">
             <div className="candleTableScroll">
             <table >
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Open</th>
-                        <th>High</th>
-                        <th>Low</th>
-                        <th>Close</th>
-                        <th>Volume</th>
-                    </tr>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Open</th>
+                            <th>High</th>
+                            <th>Low</th>
+                            <th>Close</th>
+                            <th>Volume</th>
+                        </tr> 
+                    </thead>
                 {candles.map((candle) => (
-                    <tr key={candle._id}>
-                        <td >{candle.timestamp}</td> 
-                        <td >{candle.open}</td> 
-                        <td >{candle.high}</td>
-                        <td >{candle.low}</td>
-                        <td >{candle.close}</td>
-                        <td >{candle.volume}</td>
-                    </tr>
+                    <tbody key={candle._id}>
+                        <tr>
+                            <td>{candle.timestamp}</td> 
+                            <td>{candle.open}</td> 
+                            <td>{candle.high}</td>
+                            <td>{candle.low}</td>
+                            <td>{candle.close}</td>
+                            <td>{candle.volume}</td>
+                        </tr>
+                    </tbody>
                 ))}
                 </table>  
             </div>

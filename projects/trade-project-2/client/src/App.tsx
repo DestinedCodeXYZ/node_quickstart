@@ -1,66 +1,92 @@
-import { useEffect, useState } from 'react'
-import Filter from './components/Filters';
-import './App.css'
-import { fetchData } from './functions/fetchData';
-import type { Candle } from './types/Candle';
+// COMPONENTS
 import CandleList from './components/CandleList';
 import Loading from './components/Loading';
 import IsError from './components/IsError';
 import Analytics from './components/Analytics';
-import type { WebState } from './types/WebState';
+import Filter from './components/Filters';
+import Login from './components/Login';
+
+// FUNCTIONS
+import { fetchData } from './functions/fetchData';
+import { handleLogin } from "./functions/handleLogin";
+
+// OTHER
+import './App.css'
+import type { CandleState } from './types/CandleState';
+import type { AuthState } from './types/AuthState';
+import { useState } from 'react';
+
 
 function App() {
 
+  // Filter inputs
   const [instrument, setInstrument] = useState('eurusd');
   const [timeframe, setTimeFrame] = useState('h1');
   const [from, setFrom] = useState('2017-01-01T00:00');
   const [to, setTo] = useState('2017-01-02T00:00');
   const [limit, setLimit] = useState(100);
 
-  const [webState, setWebState] = useState<WebState>({state: "loading"});
+  const [candleState, setCandleState] = useState<CandleState>({state: "loading"});
+  const [auth, setAuth] = useState<AuthState>({state: "loading"})
 
-  const url = new URL("http://localhost:3000/api/candles");
-  url.searchParams.set("instrument", instrument);
-  url.searchParams.set("timeframe", timeframe);
+  const candlesUrl = new URL("http://localhost:3000/api/candles");
+  const loginUrl = new URL("http://localhost:3000/api/auth/login");
+
+  candlesUrl.searchParams.set("instrument", instrument);
+  candlesUrl.searchParams.set("timeframe", timeframe);
 
   if (from) {
-    url.searchParams.set("from", from);
+    candlesUrl.searchParams.set("from", from);
   }
 
   if (to) {
-    url.searchParams.set("to", to);
+    candlesUrl.searchParams.set("to", to);
   }
 
   if (limit) {
-    url.searchParams.set("limit", limit.toString());
+    candlesUrl.searchParams.set("limit", limit.toString());
   }
 
+  // Function to get candle data on click.
   async function getData() {
 
-    setWebState({ state: "loading" })
+    setCandleState({ state: "loading" })
 
     try {
-      const data = await fetchData(url.toString());
-      setWebState({ state: "success", candles: data});
+      const data = await fetchData(candlesUrl.toString());
+      setCandleState({ state: "success", candles: data});
     }
 
     catch (err) {
-      console.log(`ERROR: ${err}`)
-      if (err instanceof Error) {
-        setWebState({state: "error", message: err.message});
-      }
-
-      else (console.log("An unknown error has occurred."))
+      console.log(`${err}`)
+      const message = err instanceof Error ? err.message : "An unknown error has occured."
+      setCandleState({state: "error", message})
     }
   }
 
-  useEffect(() => {
-      getData()
-  }, [])
+  async function loginAuth({username, password}: {username: string; password: string}) {
+
+    setAuth({state: "loading"});
+
+    try {
+        await handleLogin(loginUrl.toString(), username, password);
+        setAuth({state: "success", username: username})
+        getData();
+    } 
+    
+    catch(err) {
+      console.log(`${err}`)
+      const message = err instanceof Error ? err.message : "An unknown error has occured."
+      setAuth({state: "error", message})
+    }
+  }
 
   return (
     <>
-      <h1>Market Data Explorer</h1>
+    <h1><b>Market Data Explorer</b></h1>
+    {auth.state !== "success" ? <Login onLogin={loginAuth}/> :
+    
+    <div>
       <div>
         <Filter 
         instrument={instrument}
@@ -78,10 +104,12 @@ function App() {
       <div>
         <button onClick={getData}>Load Candles</button>
       </div>
-      <div>{webState.state === "success" ? <Analytics candles={webState.candles}/> : <Analytics candles={[]}/>}</div>
+      <div>{candleState.state === "success" && <Analytics candles={candleState.candles}/>}</div>
       <div className="candleData"> 
-        {webState.state === "loading" ? <Loading/> : webState.state === "error" ? <IsError error={webState.message}/> : <CandleList candles={webState.candles}/>}
+        {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && <CandleList candles={candleState.candles}/>}
       </div>
+    </div>}
+      
     </>
   )
 }

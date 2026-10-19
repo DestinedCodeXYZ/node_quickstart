@@ -37,7 +37,7 @@ export default function Analytics({candles}: {candles: Candle[]}) {
                 <p> Bullish candles: {bullishCandles.length} - {(bullishCandles.length/candles.length * 100).toFixed(2)}%</p>
                 <p> Bearish candles: {bearishCandles.length} - {(bearishCandles.length/candles.length * 100).toFixed(2)}%</p>
                 <div>Lowest Low: {lowestLow} -- Highest High: {highestHigh}</div>
-                <p>Average volume: {volAvg} <br/> Average range: {avgCandleRange.toFixed(4)} </p>
+                <p>Average volume: {volAvg} <br/> Average range: {(avgCandleRange/candles.length).toFixed(4)} </p>
             </div>
         </div>
     )

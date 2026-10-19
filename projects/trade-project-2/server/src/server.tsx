@@ -4,8 +4,11 @@ import express from 'express';
 import cors from 'cors';
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Routes & middleware
 import candleRoutes from "../routes/candleRoutes.js"
 import loginRoute from "../routes/loginRoute.js";
+import { requireAuth } from '../middleware/requireAuth.js';
 
 dotenv.config({
   path: resolve(
@@ -17,7 +20,7 @@ dotenv.config({
 const app = express();
 
 app.use(cors({
-    origin: "*", // Allow all origins for development; adjust in production
+    origin: process.env.CORS_DEV_ORIGIN, // Allow all origins for development; adjust in production
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
@@ -35,9 +38,7 @@ app.use("/api/auth/login", loginRoute);
 
 console.log("Mounting candle router");
 
-app.use("/api/candles", candleRoutes);
-
-
+app.use("/api/candles", requireAuth, candleRoutes);
 
 async function startServer() {
     const databaseURI = process.env.DB_URI;

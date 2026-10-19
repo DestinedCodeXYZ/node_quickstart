@@ -15,7 +15,8 @@ import './App.css'
 import type { CandleState } from './types/CandleState';
 import type { AuthState } from './types/AuthState';
 import { useState } from 'react';
-
+import { useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
 function App() {
 
@@ -36,11 +37,11 @@ function App() {
   candlesUrl.searchParams.set("timeframe", timeframe);
 
   if (from) {
-    candlesUrl.searchParams.set("from", from);
+    candlesUrl.searchParams.set("from", from+"Z");
   }
 
   if (to) {
-    candlesUrl.searchParams.set("to", to);
+    candlesUrl.searchParams.set("to", to+"Z");
   }
 
   if (limit) {
@@ -84,7 +85,14 @@ function App() {
   return (
     <>
     <h1><b>Market Data Explorer</b></h1>
-    {auth.state !== "success" ? <Login onLogin={loginAuth}/> :
+
+    {auth.state !== "success" ? 
+    <div>
+      <Login onLogin={loginAuth} />
+      {auth.state === "error" && <b>{auth.message}</b>} 
+    </div>
+    
+    :
     
     <div>
       <div>

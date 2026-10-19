@@ -13,7 +13,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: #301844;
+  background-color: #073983;
 }
 
 .candleTableScroll table {
@@ -24,7 +24,7 @@
 
 table {
   border-collapse: collapse;
-  background-color: rgba(92, 16, 155, 0.22);
+  background-color: rgba(56, 127, 168, 0.22);
   width: max-content;
   min-width: 100%;
 }
@@ -38,7 +38,7 @@ td {
 }
 
 td:hover {
-    background-color: rgba(96, 197, 165, 0.678);
+    background-color: rgba(60, 158, 127, 0.815);
 }
 
 th:first-child,
@@ -47,5 +47,5 @@ td:first-child {
 }
 
 tbody:nth-child(even) {
-    background-color: rgba(177, 101, 228, 0.678);
+    background-color: rgba(32, 52, 105, 0.678);
 }

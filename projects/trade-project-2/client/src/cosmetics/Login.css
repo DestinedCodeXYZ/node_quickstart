@@ -4,8 +4,8 @@ form {
     width: 400px;
     height: 80px;
     margin: 10px;
-    outline: auto rgb(201, 169, 241);
+
     border-radius: 20px;
-    background: linear-gradient(to right, #1b1933c9, #5a23b3);
+    background: linear-gradient(to top, #312d2ad7, #65a0d1);
     padding: 20px
 }

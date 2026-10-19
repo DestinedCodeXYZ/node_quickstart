@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import express from "express";
 import { getUserModel } from "../models/User.js";
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -12,16 +13,19 @@ router.post("/", async (req, res) => {
 
         if (!username || !password) {
             console.log("Missing username/password.")
-            return res.status(400).json({error: "Missing username/password"})
+            return res.status(400).json({error: "Missing username/password."})
         }
-
-        if (username.length < 1 || password.length < 1)
 
         if (typeof username !== "string" || typeof password !== "string" ) {
             console.log("Wrong username/password type received.")
             return res.status(400).json({error: "Wrong username/password type received."})
         }
 
+        if (username.length < 1 || password.length < 1) {
+            console.log("Invalid user/password")
+            return res.status(400).json({error: "Invalid user/password"})
+        }
+        
         console.log("1. Route reached.");
         
         const userData = getUserModel();
@@ -33,7 +37,7 @@ router.post("/", async (req, res) => {
         const user = await userData.findOne({ "username": username });
 
         if (!user) {
-            return res.status(401).json({error: "No user found - UNAUTHORIZED."});
+            return res.status(401).json({error: "Invalid user/password"});
         }
 
         console.log(user.username);
@@ -43,6 +47,14 @@ router.post("/", async (req, res) => {
         if (!isValid) {
             return res.status(401).json({error: "Invalid user/password"})
         }
+
+        const token = jwt.sign(
+        { sub: user.id, username: user.username },
+        process.env.JWT_SECRET!,
+        { expiresIn: "1h" },
+        );
+
+        res.json({ token, username: user.username });
         
         res.status(200).json({username: `${user.username}`})
     }

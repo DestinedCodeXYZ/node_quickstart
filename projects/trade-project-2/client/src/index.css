@@ -34,11 +34,11 @@
   :root {
     --text: #e9e9e9;
     --text-h: #f3f4f6;
-    --bg: linear-gradient(to right, #29252ea4, #5708b3c7);
+    --bg: #35312fd7;
     --border: #2e303a;
     --code-bg: #1f2028;
     --accent: #c084fc;
-    --accent-bg: rgba(124, 24, 224, 0.61);
+    --accent-bg: rgba(116, 32, 201, 0.61);
     --accent-border: rgba(192, 132, 252, 0.5);
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:

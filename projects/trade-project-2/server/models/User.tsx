@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export interface User {
     timestamp: Date;
-    username: string;
+    username:  string;
     password: string;
 }
 
@@ -15,7 +15,8 @@ export const userSchema = new mongoose.Schema<User> ({
 
     username: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
 
     password: {

@@ -9,11 +9,13 @@ export async function handleLogin(url: string, user: string, pass: string) {
             })
         })
 
+        const data: {error?: string, username?: string} = await response.json();
+
         if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status}`)
+            throw new Error(data.error ? `Login failed - ${data.error}` : `Login failed - ${response.status}`)
         }
 
-        const data: string = await response.json();
+        
         console.log(data)
 
         return data;

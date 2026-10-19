@@ -47,13 +47,11 @@ export async function login(req: Request, res: Response) {
   
         const token = jwt.sign(
           { sub: user.id, username: user.username },
-          process.env.JWT_SECRET!,
+          process.env.JWT_TOKEN!,
           { expiresIn: "1h" },
         );
-  
-        res.json({ token, username: user.username });
-          
-        res.status(200).json({username: `${user.username}`})
+
+        return res.json({ token, username: user.username });
       }
   
       catch(err) {
@@ -62,5 +60,4 @@ export async function login(req: Request, res: Response) {
       }
 }
   
-
 

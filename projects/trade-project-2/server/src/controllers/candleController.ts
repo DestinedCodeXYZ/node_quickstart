@@ -1,15 +1,13 @@
 import mongoose from "mongoose";
-import express from "express";
-import type { QueryFilter } from "mongoose";
+import type { Request, Response, NextFunction } from "express";
 
+import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
 
 
-const router = express.Router();
+export async function getCandles(req: Request, res: Response) {
 
-// Search query route
-router.get("/", async (req, res) => {
     try {
 
         const { instrument, timeframe, from, to, limit } = req.query;
@@ -104,43 +102,46 @@ router.get("/", async (req, res) => {
         console.log(`Error fetching candles: ${err}`)
         res.status(500).json({error: "Internal Server Error"})
     }
-})
+}
 
-// Individual candle route
-router.get("/:instrument/:timeframe/:id", async (req, res) => {
-    const { instrument, timeframe, id } = req.params;
-
-    if (!instrument || !timeframe || !id) {
-        return res.status(400).json({ error: "Missing parameter(s)"})
+export async function getCandleById(req: Request, res: Response) {
+    
+    try {
+        const { instrument, timeframe, id } = req.params;
+    
+        if (!instrument || !timeframe || !id) {
+            return res.status(400).json({ error: "Missing parameter(s)"})
+        }
+    
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ error: "Invalid id"})
+        }
+    
+        console.log("1. Route reached.");
+    
+        const collectionName = `candles_${instrument.toString().toLowerCase()}_${timeframe.toString().toLowerCase()}`;
+    
+        console.log(`2. Collection name: ${collectionName}`);
+    
+        const tradedata = getCandleCollection(collectionName);
+    
+        console.log("3. Model created.");
+    
+        console.log("4. About to query MongoDB");
+    
+        const candle = await tradedata.findById(id);
+    
+        if (!candle) {
+            res.status(404).json({ error: "No candle found."});
+        } 
+            
+        else {
+            console.log(`Fetched candle: ${candle}`)
+            res.json(candle);
+        }
     }
 
-    if (!mongoose.isValidObjectId(id)) {
-        return res.status(400).json({ error: "Invalid id"})
+    catch(err) {
+
     }
-
-    console.log("1. Route reached.");
-
-    const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
-
-    console.log(`2. Collection name: ${collectionName}`);
-
-    const tradedata = getCandleCollection(collectionName);
-
-    console.log("3. Model created.");
-
-    console.log("4. About to query MongoDB");
-
-    const candle = await tradedata.findById(id);
-
-    if (!candle) {
-        res.status(404).json({ error: "No candle found."});
-    } 
-        
-    else {
-        console.log(`Fetched candle: ${candle}`)
-        res.json(candle);
-    }
-
-
-}) 
-export default router
+}

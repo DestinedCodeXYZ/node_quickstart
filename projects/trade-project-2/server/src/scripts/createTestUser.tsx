@@ -1,17 +1,7 @@
-import dotenv from 'dotenv';
+import "../config/env.js";
 import mongoose from 'mongoose';
-import express from 'express';
-import { getUserModel, userSchema } from '../models/User.js';
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { getUserModel } from '../models/User.js';
 import bcrypt from 'bcrypt';
-
-dotenv.config({
-  path: resolve(
-    dirname(fileURLToPath(import.meta.url)),
-    "../../.env"
-  )
-});
 
 const password = "test";
 const saltRounds = 10;

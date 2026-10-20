@@ -1,0 +1,25 @@
+form {
+    justify-content: center;
+    display: inline-block;
+    width: 400px;
+    height: 80px;
+    margin: 10px;
+
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    background: linear-gradient(to top, #312d2ad7, #65a0d1);
+    padding: 20px
+}
+
+.authMsg {
+  justify-content: center;
+    display: inline-block;
+    width: 420px;
+    height: 20px;
+
+
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    background: linear-gradient(to bottom, #312d2ad7, #d16965);
+    padding: 10px
+}

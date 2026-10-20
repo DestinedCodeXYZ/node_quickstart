@@ -1,7 +1,8 @@
 import { useState } from "react"  
 import type { LoginProps } from "../types/Login";
-import '../cosmetics/Login.css';
+import '../styles/Login.css';
 
+// LIKELY TO BE ALL MOVED INTO LOGIN PAGE
 export default function Login({onLogin}: LoginProps) {
 
     const [user, setUser] = useState('');

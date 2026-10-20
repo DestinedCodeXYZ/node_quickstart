@@ -1,5 +1,5 @@
 import type { Candle } from '../types/Candle';
-import '../cosmetics/CandleList.css';
+import '../styles/CandleList.css';
 
 export default function CandleList({candles}: {candles: Candle[] }) {
 

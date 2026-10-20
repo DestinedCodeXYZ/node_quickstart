@@ -1,4 +1,7 @@
 import type { Candle } from '../types/Candle';
+import candleCalcs from '../utils/candleCalcs';
+
+// WORKING ON REFACTORING CALCS
 
 export default function Analytics({candles}: {candles: Candle[]}) {
 

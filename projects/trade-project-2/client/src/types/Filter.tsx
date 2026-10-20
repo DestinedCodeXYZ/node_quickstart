@@ -1,4 +1,4 @@
-export interface FilterProps {
+export interface Filter {
     instrument: string;
     timeframe: string;
     from: string;

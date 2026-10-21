@@ -1,4 +1,4 @@
-import "../cosmetics/Loading.css";
+import "../styles/Loading.css";
 import loadingGif from "../assets/work-in-progress.gif";
 
 export default function Loading() {

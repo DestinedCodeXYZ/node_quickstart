@@ -1,6 +1,6 @@
 import { useState } from "react"  
 import type { LoginProps } from "../types/Login";
-import '../cosmetics/Login.css';
+import '../styles/Login.css';
 
 export default function Login({onLogin}: LoginProps) {
 

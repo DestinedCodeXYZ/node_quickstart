@@ -3,13 +3,14 @@ import mongoose from 'mongoose';
 import { getUserModel } from '../models/User.js';
 import bcrypt from 'bcrypt';
 
-const password = "test";
+const password = process.env.TEST_PW;
 const saltRounds = 10;
-
-
 
 async function createTestUser() {
 
+    if (!password) {
+        throw new Error("TEST_PW isn't configured in the .env file.")
+    }
     const hashedPassword = bcrypt.hash(password, saltRounds);
     
     try {
@@ -26,7 +27,7 @@ async function createTestUser() {
 
         const user = getUserModel();
 
-        const testUser = new user({timestamp: new Date().toISOString(), username: "TEST", password: hashedPassword })
+        const testUser = new user({timestamp: new Date().toISOString(), username: "testuser", password: hashedPassword })
 
         await testUser.save()
 

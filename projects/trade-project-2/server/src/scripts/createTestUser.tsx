@@ -11,7 +11,7 @@ async function createTestUser() {
     if (!password) {
         throw new Error("TEST_PW isn't configured in the .env file.")
     }
-    const hashedPassword = bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     
     try {
         const databaseURI = process.env.DB_URI;
@@ -30,6 +30,7 @@ async function createTestUser() {
         const testUser = new user({timestamp: new Date().toISOString(), username: "testuser", password: hashedPassword })
 
         await testUser.save()
+        console.log("Created test user. Disconnecting...")
 
         mongoose.disconnect();
 

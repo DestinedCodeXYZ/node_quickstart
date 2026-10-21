@@ -5,6 +5,8 @@ import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
 
+const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd" ];
+const TIMEFRAMES = ["m15", "h1", "h4"];
 
 export async function getCandles(req: Request, res: Response) {
 
@@ -18,6 +20,10 @@ export async function getCandles(req: Request, res: Response) {
         }
 
         if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
+            return res.status(400).json({error: "Invalid query parameters"})
+        }
+
+        if ( !INSTRUMENTS.includes(instrument) || !TIMEFRAMES.includes(timeframe) ) {
             return res.status(400).json({error: "Invalid query parameters"})
         }
 
@@ -73,30 +79,17 @@ export async function getCandles(req: Request, res: Response) {
             queryLimit = parsedLimit;
         }
 
-        console.log("1. Route reached.");
-
         const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
 
-        console.log(`2. Collection name: ${collectionName}`);
+        console.log(`Collection name: ${collectionName}`);
 
         const tradedata = getCandleCollection(collectionName);
 
-        console.log("3. Model created.");
-
-        console.log("4. About to query MongoDB");
-
         const candles = await tradedata.find(filter).limit(queryLimit).sort({timestamp: 1});
 
-        if (candles.length === 0) {
-            res.status(404).json({ error: "No candles found."});
-        } 
-        
-        else {
-            console.log(`Fetched candles: ${candles.length}`)
-            res.json(candles);
-        }
-
-        }
+        console.log(`Fetched candles: ${candles.length}`);
+        res.status(200).json(candles);
+    }
 
     catch (err) {
         console.log(`Error fetching candles: ${err}`)
@@ -112,22 +105,24 @@ export async function getCandleById(req: Request, res: Response) {
         if (!instrument || !timeframe || !id) {
             return res.status(400).json({ error: "Missing parameter(s)"})
         }
+
+        if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
+            return res.status(400).json({error: "Invalid query parameters"})
+        }
+
+        if ( !INSTRUMENTS.includes(instrument) || !TIMEFRAMES.includes(timeframe) ) {
+            return res.status(400).json({error: "Invalid query parameters"})
+        }
     
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ error: "Invalid id"})
         }
     
-        console.log("1. Route reached.");
-    
         const collectionName = `candles_${instrument.toString().toLowerCase()}_${timeframe.toString().toLowerCase()}`;
     
-        console.log(`2. Collection name: ${collectionName}`);
+        console.log(`Collection name: ${collectionName}`);
     
         const tradedata = getCandleCollection(collectionName);
-    
-        console.log("3. Model created.");
-    
-        console.log("4. About to query MongoDB");
     
         const candle = await tradedata.findById(id);
     
@@ -142,6 +137,7 @@ export async function getCandleById(req: Request, res: Response) {
     }
 
     catch(err) {
-
+        console.log(`Error fetching candle: ${err}`)
+        res.status(500).json({error: "Internal Server Error"})
     }
 }

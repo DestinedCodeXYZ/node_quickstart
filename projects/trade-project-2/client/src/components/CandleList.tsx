@@ -31,8 +31,6 @@ export default function CandleList({candles}: {candles: Candle[] }) {
                 ))}
                 </table>  
             </div>
-        </div>
-        
-        
+        </div>  
     )
 }

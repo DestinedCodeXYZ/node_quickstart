@@ -1,35 +1,17 @@
+import { Navigate } from 'react-router-dom';
 import Login from '../components/Login';
-import { login } from '../api/login';
-
-import type { AuthState } from '../types/AuthState';
-import { useState } from 'react';
+import useAuth from '../hooks/useAuth';
 
 export default function LoginPage() {
 
-    const [auth, setAuth] = useState<AuthState>({state: "loading"})
-
-
-    async function loginAuth({username, password}: {username: string; password: string}) {
-
-    setAuth({state: "loading"});
-
-        try {
-            await login({username, password});
-            setAuth({state: "success", username: username}) // Due to change
-
-        } 
-    
-        catch(err) {
-            console.log(`${err}`)
-            const message = err instanceof Error ? err.message : "An unknown error has occured."
-            setAuth({state: "error", message})
-        }
-    }
+    const { auth, login } = useAuth();
 
     return (
         <div>
-            <Login onLogin={loginAuth} />
-            {auth.state === "error" && <p className="authMsg">{auth.message}</p>}
-        </div>
+            <h1> <b>Login</b> </h1>
+            <Login onLogin={login} />
+            {auth.state === "error" && <p className='authMsg'>{auth.message}</p>}
+            {auth.state === "success" && <Navigate to="/candles"/>}
+        </div> 
     )
 }

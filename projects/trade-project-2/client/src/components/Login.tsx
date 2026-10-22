@@ -27,6 +27,7 @@ export default function Login({onLogin}: LoginProps) {
                 </label>
                 
                 <input type="submit" value="Login"></input>
+                
             </form>
         </div>
     )

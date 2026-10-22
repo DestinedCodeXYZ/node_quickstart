@@ -1,6 +1,6 @@
-import type { Filter } from "../types/Filter";
+import type { FilterProps } from "../types/Filter";
 
-export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: Filter){
+export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: FilterProps){
     return (
         <div>
             <p>

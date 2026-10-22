@@ -8,9 +8,11 @@ import CandleList from "../components/CandleList";
 import { getCandles } from "../api/candles";
 import { useState } from "react";
 import type { CandleState } from "../types/CandleState";
+import useAuth from "../hooks/useAuth";
 
 export default function DashboardPage() {
 
+    const { logout } = useAuth();
   // Filter inputs
     const [instrument, setInstrument] = useState('eurusd');
     const [timeframe, setTimeFrame] = useState('h1');
@@ -19,7 +21,6 @@ export default function DashboardPage() {
     const [limit, setLimit] = useState(100);
 
     const [candleState, setCandleState] = useState<CandleState>({state: "loading"});
-
 
     // Function to get candle data on click.
     async function getData() {
@@ -40,6 +41,7 @@ export default function DashboardPage() {
 
     return (
         <div>
+            <h1><b>Market Data Explorer</b></h1>
             <div>
                 <Filter 
                 instrument={instrument}
@@ -54,9 +56,11 @@ export default function DashboardPage() {
                 changeTo={setTo}
                 changeLimit={setLimit}/>
             </div>
+
             <div>
                 <button onClick={getData}>Load Candles</button>
             </div>
+
             <div>{candleState.state === "success" && <Analytics candles={candleState.candles}/>}</div>
             <div className="candleData"> 
                 {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && <CandleList candles={candleState.candles}/>}

@@ -1,12 +1,15 @@
 import { useState } from "react"  
 import type { LoginProps } from "../types/Login";
 import '../styles/Login.css';
+import useAuth from "../hooks/useAuth";
 
 export default function Login({onLogin}: LoginProps) {
 
     const [user, setUser] = useState('');
     const [pass, setPass] = useState('');
 
+    const { auth } = useAuth();
+    
     return (
         <div>
             <form onSubmit={(e) => {
@@ -27,7 +30,7 @@ export default function Login({onLogin}: LoginProps) {
                 </label>
                 
                 <input type="submit" value="Login"></input>
-                
+
             </form>
         </div>
     )

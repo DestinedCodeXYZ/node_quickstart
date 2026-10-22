@@ -18,6 +18,7 @@ export function AuthProvider({ children }: {children: ReactNode}) {
             const data = await loginAuth({username, password});
             localStorage.setItem("token", data.token);
             setAuth({state: "success", username: data.username})
+            console.log("Logged in successfully!")
         } 
         
         catch(err) {

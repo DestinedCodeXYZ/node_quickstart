@@ -16,8 +16,8 @@ export default function DashboardPage() {
   // Filter inputs
     const [instrument, setInstrument] = useState('eurusd');
     const [timeframe, setTimeFrame] = useState('h1');
-    const [from, setFrom] = useState('2017-01-01T00:00');
-    const [to, setTo] = useState('2017-01-02T00:00');
+    const [from, setFrom] = useState('2017-01-01T00:00Z');
+    const [to, setTo] = useState('2017-01-02T00:00Z');
     const [limit, setLimit] = useState(100);
 
     const [candleState, setCandleState] = useState<CandleState>({state: "loading"});
@@ -42,6 +42,7 @@ export default function DashboardPage() {
     return (
         <div>
             <h1><b>Market Data Explorer</b></h1>
+            <button onClick={logout}> Logout </button>
             <div>
                 <Filter 
                 instrument={instrument}

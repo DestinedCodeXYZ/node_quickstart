@@ -6,7 +6,7 @@ import Analytics from "../components/Analytics";
 import CandleList from "../components/CandleList";
 
 import { getCandles } from "../api/candles";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CandleState } from "../types/CandleState";
 import useAuth from "../hooks/useAuth";
 
@@ -21,6 +21,10 @@ export default function DashboardPage() {
     const [limit, setLimit] = useState(100);
 
     const [candleState, setCandleState] = useState<CandleState>({state: "loading"});
+
+    useEffect(() => {
+        getData()
+    }, [])
 
     // Function to get candle data on click.
     async function getData() {
@@ -41,8 +45,8 @@ export default function DashboardPage() {
 
     return (
         <div>
-            <h1><b>Market Data Explorer</b></h1>
-            <button onClick={logout}> Logout </button>
+            <h1><b>Market Data Explorer</b> <button onClick={logout}> Logout </button></h1>
+            
             <div>
                 <Filter 
                 instrument={instrument}

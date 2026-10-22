@@ -18,8 +18,8 @@ export default function CandleList({candles}: {candles: Candle[] }) {
                     </tr> 
                     </thead>
                 {candles.map((candle) => (
-                    <tbody>
-                        <tr key={candle._id}>
+                    <tbody key={candle._id}>
+                        <tr >
                             <td>{candle.timestamp}</td> 
                             <td>{candle.open}</td> 
                             <td>{candle.high}</td>

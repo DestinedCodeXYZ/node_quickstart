@@ -1,3 +1,8 @@
+@keyframes fadeInAnimation {
+    from { opacity: 0% };
+    to { opacity: 100% }
+}
+
 form {
     justify-content: center;
     display: inline-block;
@@ -5,7 +10,25 @@ form {
     height: 80px;
     margin: 10px;
 
-    border-radius: 20px;
-    background: linear-gradient(to top, #312d2ad7, #65a0d1);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    background: linear-gradient(to top, #312d2ad7, #5c91bd);
     padding: 20px
+}
+
+.authMsg {
+    animation-name: fadeInAnimation;
+    animation-duration: 2s;
+
+    justify-content: center;
+    display: inline-block;
+    width: 420px;
+    height: 40px;
+    padding: 10px;
+    margin: 10px;
+
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    background: linear-gradient(to bottom, #312d2ad7, #a02e2e);
+
 }

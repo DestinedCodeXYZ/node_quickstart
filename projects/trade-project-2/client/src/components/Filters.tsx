@@ -1,42 +1,50 @@
 import type { FilterProps } from "../types/Filter";
 
 export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: FilterProps){
+    
+    const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd" ];
+    const TIMEFRAMES = ["m15", "h1", "h4"];
     return (
         <div>
             <p>
-                <label> Instrument:
-                    <input type="text"
-                    value={instrument}
-                    onChange={(e) => {changeInstrument(e.target.value)}}
-                    placeholder="Enter instrument" 
-                    />
-                </label>
+                
+                <label> 
+                    Instrument:
+                    <select value = {instrument} 
+                    onChange={(e) => {changeInstrument(e.target.value)}}>
+                        <option value="eurgbp">EURGBP</option>
+                        <option value="eurusd">EURUSD</option>
+                        <option value="gbpusd">GBPUSD</option>
+                        <option value="usatechidxusd">USATECHIDXUSD</option>
+                    </select>
+                
                 <br/>
-                <label> Timeframe:
-                    <input type="text"
-                    value={timeframe}
-                    onChange={(e) => {changeTimeframe(e.target.value)}}
-                    placeholder="Enter timeframe" 
-                    />
-                </label>
+                 Timeframe:
+                    <select value = {timeframe} 
+                    onChange={(e) => {changeTimeframe(e.target.value)}}>
+                        <option value="m15">m15</option>
+                        <option value="h1">h1</option>
+                        <option value="h4">h4</option>
+                    </select>
+                
                 <br/>
-                <label> Start:
+                 Start:
                     <input type="datetime-local"
                     value={from.slice(0,16)}
                     onChange={(e) => {changeFrom(e.target.value)}}
                     placeholder="Enter 'from' date" 
                     />
-                </label>
+                
                 <br/>
-                <label> End:
+                 End:
                     <input type="datetime-local"
                     value={to.slice(0,16)}
                     onChange={(e) => {changeTo(e.target.value)}}
                     placeholder="Enter 'to' date" 
                     />
-                </label>
+                
                 <br/>
-                <label> Limit
+                 Limit:
                     <input type="number"
                     value={limit}
                     onChange={(e) => {changeLimit(e.target.valueAsNumber)}}

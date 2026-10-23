@@ -30,6 +30,6 @@ console.log("Mounting candle router");
 
 app.use("/api/candles", requireAuth, candleRoutes);
 
-app.use("/", errorHandler);
+app.use(errorHandler);
 
 export default app;

@@ -92,7 +92,7 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
 
     catch (err) {
         console.log(`Error fetching candles: ${err}`)
-        throw new Api500Error("Internal Server Error")
+        throw err
     }
 }
 

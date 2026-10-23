@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { getUserModel } from "../models/User.js";
 import bcrypt from 'bcrypt';
 import jwt from "jsonwebtoken";
-import { Api400Error, Api401Error, Api500Error } from "../classes/errorClasses.js";
+import { Api400Error, Api401Error } from "../classes/errorClasses.js";
 
 export async function login(req: Request, res: Response) {
 
@@ -10,18 +10,15 @@ export async function login(req: Request, res: Response) {
         const { username, password } = req.body
   
         if (!username || !password) {
-          console.log("Missing username/password.");
           throw new Api400Error("Missing username/password.");
         }
   
         if (typeof username !== "string" || typeof password !== "string" ) {
-          console.log("Wrong username/password type received.");
           throw new Api400Error("Wrong username/password type received.");
         }
   
         if (username.length < 1 || password.length < 1) {
-          console.log("Invalid user/password");
-          throw new Api400Error("Invalid user/password");
+          throw new Api400Error("Invalid user/password.");
         }
 
         const userData = getUserModel();
@@ -29,13 +26,13 @@ export async function login(req: Request, res: Response) {
         const user = await userData.findOne({ "username": username });
   
         if (!user) {
-          throw new Api401Error("Invalid user/password");
+          throw new Api401Error("Invalid user/password.");
         }
   
         const isValid = await bcrypt.compare(password, user.password);
   
         if (!isValid) {
-          throw new Api401Error("Invalid user/password")
+          throw new Api401Error("Invalid user/password.")
         }
   
         const token = jwt.sign(
@@ -48,8 +45,7 @@ export async function login(req: Request, res: Response) {
       }
   
       catch(err) {
-        console.log(err)
-        throw new Api500Error("Internal server error");
+        throw err
       }
 }
   

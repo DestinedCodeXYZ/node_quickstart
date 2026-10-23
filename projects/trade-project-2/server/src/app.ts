@@ -5,6 +5,7 @@ import cors from 'cors';
 import candleRoutes from "./routes/candleRoutes.js"
 import loginRoute from "./routes/loginRoute.js";
 import { requireAuth } from './middleware/requireAuth.js';
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
@@ -28,5 +29,7 @@ app.use("/api/login", loginRoute);
 console.log("Mounting candle router");
 
 app.use("/api/candles", requireAuth, candleRoutes);
+
+app.use("/", errorHandler);
 
 export default app;

@@ -6,7 +6,7 @@ const httpStatusCodes = {
     INTERNAL_SERVER: 500
 }
 
-class BaseError extends Error {
+export class BaseError extends Error {
     statusCode: number;
     isOperational: boolean;
 

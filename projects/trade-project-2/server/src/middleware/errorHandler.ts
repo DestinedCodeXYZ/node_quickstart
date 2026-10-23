@@ -5,9 +5,9 @@ export const errorHandler: ErrorRequestHandler =
 (err, _req: Request, res: Response, _next: NextFunction) => {
 
     if (err instanceof BaseError) {
-        res.status(err.statusCode).json({error :err.message})
+        return res.status(err.statusCode).json({error :err.message})
     }
 
     console.error(err);
-    res.status(500).json({error: "Internal Server Error."})
+    return res.status(500).json({error: "Internal Server Error."})
 }

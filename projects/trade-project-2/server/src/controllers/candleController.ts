@@ -4,11 +4,12 @@ import type { Request, Response, NextFunction } from "express";
 import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
+import { Api400Error, Api401Error, Api404Error, Api500Error } from "../classes/errorClasses.js";
 
-const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd" ];
+const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
 
-export async function getCandles(req: Request, res: Response) {
+export async function getCandles(req: Request, res: Response, next: NextFunction) {
 
     try {
 
@@ -16,15 +17,15 @@ export async function getCandles(req: Request, res: Response) {
 
         // Checking for required params
         if ( !instrument || !timeframe ) {
-            return res.status(400).json({error: "Missing instrument/timeframe"})
+           throw new Api400Error("Missing instrument/timeframe")
         }
 
         if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-            return res.status(400).json({error: "Invalid query parameters"})
+            throw new Api400Error("Invalid query parameters")
         }
 
-        if ( !INSTRUMENTS.includes(instrument) || !TIMEFRAMES.includes(timeframe) ) {
-            return res.status(400).json({error: "Invalid query parameters"})
+        if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
+           throw new Api400Error("Invalid query parameters")
         }
 
         const filter: QueryFilter<Candle> = {};
@@ -40,7 +41,7 @@ export async function getCandles(req: Request, res: Response) {
             if (from) {
                 parsedFrom = new Date(String(from));
                 if (isNaN(parsedFrom.getTime())) {
-                    return res.status(400).json({ error: "Invalid 'from' date"})
+                    throw new Api400Error("Invalid 'from' date")
                 }
 
                 filter.timestamp.$gte = parsedFrom;
@@ -49,14 +50,14 @@ export async function getCandles(req: Request, res: Response) {
             if (to) {
                 parsedTo = new Date(String(to));
                 if (isNaN(parsedTo.getTime())) {
-                    return res.status(400).json({ error: "Invalid 'to' date"})
+                    throw new Api400Error("Invalid 'to' date")
                 }
 
                 filter.timestamp.$lte = parsedTo;
             }
 
             if (parsedFrom && parsedTo && parsedFrom > parsedTo) {
-                return res.status(400).json({error: "'From' date cannot be later than 'to' date"})
+                throw new Api400Error("'From' date cannot be later than 'to' date")
             }
         }
         
@@ -66,14 +67,12 @@ export async function getCandles(req: Request, res: Response) {
         if (limit) {
 
             if (typeof limit !== "string") {
-                return res.status(400).json ({
-                    error: "Invalid limit parameter"
-                });
+                throw new Api400Error("Invalid limit parameter");
             }
             
             const parsedLimit = Number(limit);
             if (!Number.isInteger(parsedLimit) || parsedLimit <= 0 || parsedLimit > queryCap) {
-                return res.status(400).json({error: "Invalid limit parameter"})
+                throw new Api400Error("Invalid limit parameter");
             } 
             
             queryLimit = parsedLimit;
@@ -93,7 +92,7 @@ export async function getCandles(req: Request, res: Response) {
 
     catch (err) {
         console.log(`Error fetching candles: ${err}`)
-        res.status(500).json({error: "Internal Server Error"})
+        throw new Api500Error("Internal Server Error")
     }
 }
 
@@ -110,7 +109,7 @@ export async function getCandleById(req: Request, res: Response) {
             return res.status(400).json({error: "Invalid query parameters"})
         }
 
-        if ( !INSTRUMENTS.includes(instrument) || !TIMEFRAMES.includes(timeframe) ) {
+        if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
             return res.status(400).json({error: "Invalid query parameters"})
         }
     

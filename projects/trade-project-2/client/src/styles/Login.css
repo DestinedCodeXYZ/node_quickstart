@@ -1,6 +1,6 @@
 @keyframes fadeInAnimation {
-    from { opacity: 0% };
-    to { opacity: 100% }
+    from { opacity: 0%; };
+    to { opacity: 100%; };
 }
 
 form {
@@ -18,17 +18,17 @@ form {
 
 .authMsg {
     animation-name: fadeInAnimation;
-    animation-duration: 2s;
+    animation-duration: 3s;
 
     justify-content: center;
     display: inline-block;
-    width: 420px;
+    width: 440px;
     height: 40px;
-    padding: 10px;
+    padding-top: 20px;
     margin: 10px;
 
     border-bottom-left-radius: 20px;
     border-bottom-right-radius: 20px;
-    background: linear-gradient(to bottom, #312d2ad7, #a02e2e);
+    background: linear-gradient(to bottom, #312d2ad7, #e76a39);
 
 }

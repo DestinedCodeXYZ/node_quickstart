@@ -4,6 +4,7 @@ export default function Filter({instrument, timeframe, from, to, limit, changeIn
     
     const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd" ];
     const TIMEFRAMES = ["m15", "h1", "h4"];
+    
     return (
         <div>
             <p>

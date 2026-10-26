@@ -5,13 +5,12 @@ import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
 import { Api400Error, Api401Error, Api404Error, Api500Error } from "../classes/errorClasses.js";
+import { error } from "node:console";
 
 const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
 
 export async function getCandles(req: Request, res: Response, next: NextFunction) {
-
-    try {
 
         const { instrument, timeframe, from, to, limit } = req.query;
 
@@ -78,22 +77,17 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
             queryLimit = parsedLimit;
         }
 
-        const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
+    const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
 
-        console.log(`Collection name: ${collectionName}`);
+    console.log(`Collection name: ${collectionName}`);
 
-        const tradedata = getCandleCollection(collectionName);
+    const tradedata = getCandleCollection(collectionName);
 
-        const candles = await tradedata.find(filter).limit(queryLimit).sort({timestamp: 1});
+    const candles = await tradedata.find(filter).limit(queryLimit).sort({timestamp: 1});
 
-        console.log(`Fetched candles: ${candles.length}`);
-        res.status(200).json(candles);
-    }
+    console.log(`Fetched candles: ${candles.length}`);
+    res.status(200).json(candles);
 
-    catch (err) {
-        console.log(`Error fetching candles: ${err}`)
-        throw err
-    }
 }
 
 export async function getCandleById(req: Request, res: Response) {
@@ -102,37 +96,31 @@ export async function getCandleById(req: Request, res: Response) {
         const { instrument, timeframe, id } = req.params;
     
         if (!instrument || !timeframe || !id) {
-            return res.status(400).json({ error: "Missing parameter(s)"})
+            throw new Api400Error("Missing parameter(s)");
         }
 
         if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-            return res.status(400).json({error: "Invalid query parameters"})
+           throw new Api400Error("Invalid query parameters");
         }
 
         if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
-            return res.status(400).json({error: "Invalid query parameters"})
+            throw new Api400Error("Invalid query parameters")
         }
     
         if (!mongoose.isValidObjectId(id)) {
-            return res.status(400).json({ error: "Invalid id"})
+            throw new Api400Error("Invalid id")
         }
     
-        const collectionName = `candles_${instrument.toString().toLowerCase()}_${timeframe.toString().toLowerCase()}`;
-    
-        console.log(`Collection name: ${collectionName}`);
+        const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
     
         const tradedata = getCandleCollection(collectionName);
-    
         const candle = await tradedata.findById(id);
     
         if (!candle) {
-            res.status(404).json({ error: "No candle found."});
+            throw new Api404Error("No candle found.");
         } 
             
-        else {
-            console.log(`Fetched candle: ${candle}`)
-            res.json(candle);
-        }
+        res.json(candle);
     }
 
     catch(err) {

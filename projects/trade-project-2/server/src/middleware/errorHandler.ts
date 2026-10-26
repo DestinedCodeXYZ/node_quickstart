@@ -1,11 +1,15 @@
 import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
-import { BaseError } from "../classes/errorClasses.js";
+import { AppError } from "../classes/errorClasses.js";
 
-export const errorHandler: ErrorRequestHandler = 
-(err, _req: Request, res: Response, _next: NextFunction) => {
+export const errorHandler = 
+(err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
-    if (err instanceof BaseError) {
+    if (err instanceof AppError) {
         return res.status(err.statusCode).json({error :err.message})
+    }
+
+    if (err instanceof SyntaxError) {
+        return res.status(400).json({error: "Malformed JSON in request body"})
     }
 
     console.error(err);

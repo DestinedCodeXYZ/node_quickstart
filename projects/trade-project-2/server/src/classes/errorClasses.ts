@@ -6,9 +6,9 @@ const httpStatusCodes = {
     INTERNAL_SERVER: 500
 }
 
-export class BaseError extends Error {
-    statusCode: number;
-    isOperational: boolean;
+export class AppError extends Error {
+    readonly statusCode: number;
+    readonly isOperational: boolean;
 
     constructor (name: string, statusCode: number, isOperational: boolean, description: string) {
 
@@ -23,7 +23,7 @@ export class BaseError extends Error {
     }
 }
 
-export class Api400Error extends BaseError {
+export class Api400Error extends AppError {
 
     constructor (
     description = "Bad Request - Missing/invalid parameters.",
@@ -34,7 +34,7 @@ export class Api400Error extends BaseError {
     }
 }
 
-export class Api401Error extends BaseError {
+export class Api401Error extends AppError {
 
     constructor (
     description = 'Unauthorised.',
@@ -45,7 +45,7 @@ export class Api401Error extends BaseError {
     }
 }
 
-export class Api404Error extends BaseError {
+export class Api404Error extends AppError {
 
     constructor (
     description = 'Resource(s) not found.',
@@ -56,12 +56,12 @@ export class Api404Error extends BaseError {
     }
 }
 
-export class Api500Error extends BaseError {
+export class Api500Error extends AppError {
 
     constructor (
     description = 'Internal Server Error.',
     statusCode = httpStatusCodes.INTERNAL_SERVER,
-    isOperational = true
+    isOperational = false
     ) {
         super("Api500Error", statusCode, isOperational, description)
     }

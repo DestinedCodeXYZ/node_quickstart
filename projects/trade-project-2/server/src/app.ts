@@ -6,6 +6,7 @@ import candleRoutes from "./routes/candleRoutes.js"
 import loginRoute from "./routes/loginRoute.js";
 import { requireAuth } from './middleware/requireAuth.js';
 import { errorHandler } from "./middleware/errorHandler.js";
+import { notFound } from "./middleware/notFound.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ console.log("Mounting candle router");
 
 app.use("/api/candles", requireAuth, candleRoutes);
 
+app.use(notFound);
 app.use(errorHandler);
 
 export default app;

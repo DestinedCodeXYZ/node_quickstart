@@ -6,8 +6,7 @@ import { Api400Error, Api401Error } from "../classes/errorClasses.js";
 
 export async function login(req: Request, res: Response) {
 
-  try {
-        const { username, password } = req.body
+        const { username, password } = req.body ?? {};
   
         if (!username || !password) {
           throw new Api400Error("Missing username/password.");
@@ -42,11 +41,7 @@ export async function login(req: Request, res: Response) {
         );
 
         return res.json({ token, username: user.username });
-      }
-  
-      catch(err) {
-        throw err
-      }
+
 }
   
 

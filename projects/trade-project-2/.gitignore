@@ -2,4 +2,3 @@
 node_modules
 server/auth.http
 */.env
-*/*/*/tests

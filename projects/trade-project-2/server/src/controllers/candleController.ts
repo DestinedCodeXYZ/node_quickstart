@@ -4,8 +4,7 @@ import type { Request, Response, NextFunction } from "express";
 import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
-import { Api400Error, Api401Error, Api404Error, Api500Error } from "../classes/errorClasses.js";
-import { error } from "node:console";
+import { Api400Error, Api404Error } from "../classes/errorClasses.js";
 
 const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
@@ -91,40 +90,33 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
 }
 
 export async function getCandleById(req: Request, res: Response) {
-    
-    try {
-        const { instrument, timeframe, id } = req.params;
-    
-        if (!instrument || !timeframe || !id) {
-            throw new Api400Error("Missing parameter(s)");
-        }
 
-        if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-           throw new Api400Error("Invalid query parameters");
-        }
+    const { instrument, timeframe, id } = req.params;
+    
+    if (!instrument || !timeframe || !id) {
+        throw new Api400Error("Missing parameter(s)");
+    }
 
-        if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
-            throw new Api400Error("Invalid query parameters")
-        }
+    if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
+       throw new Api400Error("Invalid query parameters");
+    }
+
+    if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
+        throw new Api400Error("Invalid query parameters")
+    }
     
-        if (!mongoose.isValidObjectId(id)) {
-            throw new Api400Error("Invalid id")
-        }
+    if (!mongoose.isValidObjectId(id)) {
+        throw new Api400Error("Invalid id")
+    }
     
-        const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
+    const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
     
-        const tradedata = getCandleCollection(collectionName);
-        const candle = await tradedata.findById(id);
+    const tradedata = getCandleCollection(collectionName);
+    const candle = await tradedata.findById(id);
     
-        if (!candle) {
-            throw new Api404Error("No candle found.");
-        } 
+    if (!candle) {
+        throw new Api404Error("No candle found.");
+    } 
             
-        res.json(candle);
-    }
-
-    catch(err) {
-        console.log(`Error fetching candle: ${err}`)
-        res.status(500).json({error: "Internal Server Error"})
-    }
+    res.json(candle);
 }

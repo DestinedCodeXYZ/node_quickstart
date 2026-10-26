@@ -23,11 +23,7 @@ app.use((req, res, next) => {
     next();
 })
 
-console.log("Mounting login router");
-
 app.use("/api/login", loginRoute);
-
-console.log("Mounting candle router");
 
 app.use("/api/candles", requireAuth, candleRoutes);
 

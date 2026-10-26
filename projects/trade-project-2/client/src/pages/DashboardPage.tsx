@@ -9,6 +9,7 @@ import { getCandles } from "../api/candles";
 import { useEffect, useState } from "react";
 import type { CandleState } from "../types/CandleState";
 import useAuth from "../hooks/useAuth";
+import { getErrorMessage } from "../api/getErrorMessage";
 
 export default function DashboardPage() {
 
@@ -37,9 +38,7 @@ export default function DashboardPage() {
         }
 
         catch (err) {
-            console.log(`${err}`)
-            const message = err instanceof Error ? err.message : "An unknown error has occured."
-            setCandleState({state: "error", message})
+            setCandleState({state: "error", message: getErrorMessage(err)});
         }
     }
 

@@ -1,43 +1,28 @@
 import type { Candle } from '../types/Candle';
+import { candleCalcs } from '../utils/candleCalcs';
 
 export default function Analytics({candles}: {candles: Candle[]}) {
 
-    const bullishCandles = candles.filter((candle) => {
-        return candle.open < candle.close
-    });
+    const bullishCandles = candleCalcs("bullishCandles", candles);
     
-    const bearishCandles = candles.filter((candle) => {
-        return candle.open > candle.close
-    });
+    const bearishCandles = candleCalcs("bearishCandles", candles);
 
-    const lowestLow = candles.reduce((candle, nextCandle) => {
-       return Math.min(candle, nextCandle.low)
-    }, Infinity);
+    const lowestLow = candleCalcs("lowestLow", candles);
 
-    const highestHigh = candles.reduce((candle, nextCandle) => {
-       return Math.max(candle, nextCandle.high)
-    }, 0);
+    const highestHigh = candleCalcs("highestHigh", candles);
 
-    const volAvg = ((candles.reduce((candle, nextCandle) => {
-        return candle + nextCandle.volume
-    }, 0)) / candles.length).toFixed(2)
+    const volAvg = candleCalcs("volAvg", candles);
 
-
-    const avgCandleRange = candles.length === 0 ?
-    0
-    : candles.reduce(
-        (sum, candle) => 
-        sum + (candle.high - candle.low), 0
-    )
+    const avgCandleRange = candleCalcs("avgCandleRange", candles);
 
     return (
         <div>
             <div>
                 <p> Candles: {candles.length}</p>
-                <p> Bullish candles: {bullishCandles.length} - {(bullishCandles.length/candles.length * 100).toFixed(2)}%</p>
-                <p> Bearish candles: {bearishCandles.length} - {(bearishCandles.length/candles.length * 100).toFixed(2)}%</p>
+                <p> Bullish candles: {bullishCandles} - {(bullishCandles/candles.length * 100).toFixed(2)}%</p>
+                <p> Bearish candles: {bearishCandles} - {(bearishCandles/candles.length * 100).toFixed(2)}%</p>
                 <div>Lowest Low: {lowestLow} -- Highest High: {highestHigh}</div>
-                <p>Average volume: {volAvg} <br/> Average range: {(avgCandleRange/candles.length).toFixed(4)} </p>
+                <p>Average volume: {volAvg} <br/> Average range: {(avgCandleRange).toFixed(4)} </p>
             </div>
         </div>
     )

@@ -1,8 +1,8 @@
-import axios from "axios";
 import { createContext, useState, type ReactNode } from "react";
 import type { AuthContextValue } from "../types/Auth";
 import type { AuthState } from "../types/Auth";
 import { loginAuth } from "../api/loginAuth";
+import { getErrorMessage } from "../api/getErrorMessage";
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -22,13 +22,7 @@ export function AuthProvider({ children }: {children: ReactNode}) {
         } 
         
         catch(err) {
-            const message = axios.isAxiosError<{ error?: string }>(err)
-            ? err.response?.data?.error ?? err.message
-            : err instanceof Error
-                ? err.message
-                : "An unknown error has occurred.";
-
-            setAuth({ state: "error", message })   
+            setAuth({ state: "error", message: getErrorMessage(err) })   
         }
     }
 

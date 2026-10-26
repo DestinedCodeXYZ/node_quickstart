@@ -20,7 +20,7 @@ export default function CandleList({candles}: {candles: Candle[] }) {
                 {candles.map((candle) => (
                     <tbody key={candle._id}>
                         <tr >
-                            <td>{candle.timestamp}</td> 
+                            <td>{new Date(candle.timestamp).toLocaleDateString()+ " " + new Date(candle.timestamp).toLocaleTimeString()}</td> 
                             <td>{candle.open}</td> 
                             <td>{candle.high}</td>
                             <td>{candle.low}</td>

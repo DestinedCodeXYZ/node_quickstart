@@ -9,8 +9,8 @@ export interface User {
 export const userSchema = new mongoose.Schema<User> ({
 
     timestamp: {
-            type: Date,
-            required: true
+        type: Date,
+        required: true
     },
 
     username: {

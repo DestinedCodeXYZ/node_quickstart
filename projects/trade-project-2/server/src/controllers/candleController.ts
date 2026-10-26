@@ -4,27 +4,27 @@ import type { Request, Response, NextFunction } from "express";
 import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
+import { AppError } from "../classes/errorClasses.js";
+import { error } from "node:console";
 
-const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd" ];
+const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
 
-export async function getCandles(req: Request, res: Response) {
-
-    try {
+export async function getCandles(req: Request, res: Response, next: NextFunction) {
 
         const { instrument, timeframe, from, to, limit } = req.query;
 
         // Checking for required params
         if ( !instrument || !timeframe ) {
-            return res.status(400).json({error: "Missing instrument/timeframe"})
+           throw new AppError(400, "Missing instrument/timeframe", true)
         }
 
         if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-            return res.status(400).json({error: "Invalid query parameters"})
+            throw new AppError(400, "Invalid query parameters", true)
         }
 
-        if ( !INSTRUMENTS.includes(instrument) || !TIMEFRAMES.includes(timeframe) ) {
-            return res.status(400).json({error: "Invalid query parameters"})
+        if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
+           throw new AppError(400, "Invalid query parameters", true)
         }
 
         const filter: QueryFilter<Candle> = {};
@@ -40,7 +40,7 @@ export async function getCandles(req: Request, res: Response) {
             if (from) {
                 parsedFrom = new Date(String(from));
                 if (isNaN(parsedFrom.getTime())) {
-                    return res.status(400).json({ error: "Invalid 'from' date"})
+                    throw new AppError(400, "Invalid 'from' date")
                 }
 
                 filter.timestamp.$gte = parsedFrom;
@@ -49,14 +49,14 @@ export async function getCandles(req: Request, res: Response) {
             if (to) {
                 parsedTo = new Date(String(to));
                 if (isNaN(parsedTo.getTime())) {
-                    return res.status(400).json({ error: "Invalid 'to' date"})
+                    throw new AppError(400, "Invalid 'to' date")
                 }
 
                 filter.timestamp.$lte = parsedTo;
             }
 
             if (parsedFrom && parsedTo && parsedFrom > parsedTo) {
-                return res.status(400).json({error: "'From' date cannot be later than 'to' date"})
+                throw new AppError(400, "'From' date cannot be later than 'to' date")
             }
         }
         
@@ -66,78 +66,58 @@ export async function getCandles(req: Request, res: Response) {
         if (limit) {
 
             if (typeof limit !== "string") {
-                return res.status(400).json ({
-                    error: "Invalid limit parameter"
-                });
+                throw new AppError(400, "Invalid limit parameter");
             }
             
             const parsedLimit = Number(limit);
             if (!Number.isInteger(parsedLimit) || parsedLimit <= 0 || parsedLimit > queryCap) {
-                return res.status(400).json({error: "Invalid limit parameter"})
+                throw new AppError(400, "Invalid limit parameter");
             } 
             
             queryLimit = parsedLimit;
         }
 
-        const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
+    const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
 
-        console.log(`Collection name: ${collectionName}`);
+    console.log(`Collection name: ${collectionName}`);
 
-        const tradedata = getCandleCollection(collectionName);
+    const tradedata = getCandleCollection(collectionName);
 
-        const candles = await tradedata.find(filter).limit(queryLimit).sort({timestamp: 1});
+    const candles = await tradedata.find(filter).limit(queryLimit).sort({timestamp: 1});
 
-        console.log(`Fetched candles: ${candles.length}`);
-        res.status(200).json(candles);
-    }
+    console.log(`Fetched candles: ${candles.length}`);
+    res.status(200).json(candles);
 
-    catch (err) {
-        console.log(`Error fetching candles: ${err}`)
-        res.status(500).json({error: "Internal Server Error"})
-    }
 }
 
 export async function getCandleById(req: Request, res: Response) {
-    
-    try {
-        const { instrument, timeframe, id } = req.params;
-    
-        if (!instrument || !timeframe || !id) {
-            return res.status(400).json({ error: "Missing parameter(s)"})
-        }
 
-        if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-            return res.status(400).json({error: "Invalid query parameters"})
-        }
+    const { instrument, timeframe, id } = req.params;
+    
+    if (!instrument || !timeframe || !id) {
+        throw new AppError(400, "Missing parameter(s)", true);
+    }
 
-        if ( !INSTRUMENTS.includes(instrument) || !TIMEFRAMES.includes(timeframe) ) {
-            return res.status(400).json({error: "Invalid query parameters"})
-        }
+    if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
+       throw new AppError(400, "Invalid query parameters", true);
+    }
+
+    if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
+        throw new AppError(400, "Invalid query parameters", true)
+    }
     
-        if (!mongoose.isValidObjectId(id)) {
-            return res.status(400).json({ error: "Invalid id"})
-        }
+    if (!mongoose.isValidObjectId(id)) {
+        throw new AppError(400, "Invalid id", true)
+    }
     
-        const collectionName = `candles_${instrument.toString().toLowerCase()}_${timeframe.toString().toLowerCase()}`;
+    const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
     
-        console.log(`Collection name: ${collectionName}`);
+    const tradedata = getCandleCollection(collectionName);
+    const candle = await tradedata.findById(id);
     
-        const tradedata = getCandleCollection(collectionName);
-    
-        const candle = await tradedata.findById(id);
-    
-        if (!candle) {
-            res.status(404).json({ error: "No candle found."});
-        } 
+    if (!candle) {
+        throw new AppError(404, "No candle found.", true);
+    } 
             
-        else {
-            console.log(`Fetched candle: ${candle}`)
-            res.json(candle);
-        }
-    }
-
-    catch(err) {
-        console.log(`Error fetching candle: ${err}`)
-        res.status(500).json({error: "Internal Server Error"})
-    }
+    res.json(candle);
 }

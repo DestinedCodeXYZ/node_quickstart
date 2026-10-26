@@ -2,9 +2,6 @@ import type { FilterProps } from "../types/Filter";
 
 export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: FilterProps){
     
-    const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd" ];
-    const TIMEFRAMES = ["m15", "h1", "h4"];
-    
     return (
         <div>
             <p>

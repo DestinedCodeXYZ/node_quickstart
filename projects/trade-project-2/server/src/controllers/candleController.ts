@@ -4,7 +4,8 @@ import type { Request, Response, NextFunction } from "express";
 import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
-import { Api400Error, Api404Error } from "../classes/errorClasses.js";
+import { AppError } from "../classes/errorClasses.js";
+import { error } from "node:console";
 
 const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
@@ -15,15 +16,15 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
 
         // Checking for required params
         if ( !instrument || !timeframe ) {
-           throw new Api400Error("Missing instrument/timeframe")
+           throw new AppError(400, "Missing instrument/timeframe", true)
         }
 
         if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-            throw new Api400Error("Invalid query parameters")
+            throw new AppError(400, "Invalid query parameters", true)
         }
 
         if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
-           throw new Api400Error("Invalid query parameters")
+           throw new AppError(400, "Invalid query parameters", true)
         }
 
         const filter: QueryFilter<Candle> = {};
@@ -39,7 +40,7 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
             if (from) {
                 parsedFrom = new Date(String(from));
                 if (isNaN(parsedFrom.getTime())) {
-                    throw new Api400Error("Invalid 'from' date")
+                    throw new AppError(400, "Invalid 'from' date")
                 }
 
                 filter.timestamp.$gte = parsedFrom;
@@ -48,14 +49,14 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
             if (to) {
                 parsedTo = new Date(String(to));
                 if (isNaN(parsedTo.getTime())) {
-                    throw new Api400Error("Invalid 'to' date")
+                    throw new AppError(400, "Invalid 'to' date")
                 }
 
                 filter.timestamp.$lte = parsedTo;
             }
 
             if (parsedFrom && parsedTo && parsedFrom > parsedTo) {
-                throw new Api400Error("'From' date cannot be later than 'to' date")
+                throw new AppError(400, "'From' date cannot be later than 'to' date")
             }
         }
         
@@ -65,12 +66,12 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
         if (limit) {
 
             if (typeof limit !== "string") {
-                throw new Api400Error("Invalid limit parameter");
+                throw new AppError(400, "Invalid limit parameter");
             }
             
             const parsedLimit = Number(limit);
             if (!Number.isInteger(parsedLimit) || parsedLimit <= 0 || parsedLimit > queryCap) {
-                throw new Api400Error("Invalid limit parameter");
+                throw new AppError(400, "Invalid limit parameter");
             } 
             
             queryLimit = parsedLimit;
@@ -94,19 +95,19 @@ export async function getCandleById(req: Request, res: Response) {
     const { instrument, timeframe, id } = req.params;
     
     if (!instrument || !timeframe || !id) {
-        throw new Api400Error("Missing parameter(s)");
+        throw new AppError(400, "Missing parameter(s)", true);
     }
 
     if ( typeof instrument !== "string" || typeof timeframe !== "string" ) {
-       throw new Api400Error("Invalid query parameters");
+       throw new AppError(400, "Invalid query parameters", true);
     }
 
     if ( !INSTRUMENTS.includes(instrument.toLowerCase()) || !TIMEFRAMES.includes(timeframe.toLowerCase()) ) {
-        throw new Api400Error("Invalid query parameters")
+        throw new AppError(400, "Invalid query parameters", true)
     }
     
     if (!mongoose.isValidObjectId(id)) {
-        throw new Api400Error("Invalid id")
+        throw new AppError(400, "Invalid id", true)
     }
     
     const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
@@ -115,7 +116,7 @@ export async function getCandleById(req: Request, res: Response) {
     const candle = await tradedata.findById(id);
     
     if (!candle) {
-        throw new Api404Error("No candle found.");
+        throw new AppError(404, "No candle found.", true);
     } 
             
     res.json(candle);

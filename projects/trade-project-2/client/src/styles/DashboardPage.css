@@ -1,0 +1,31 @@
+.dbPageTitle {
+    text-shadow: 2px 2px 5px #5c91bd;
+}
+
+.analytics {
+    background: linear-gradient(to top, #312d2ad7, #5c91bd );
+    margin: auto;
+    width: 400px;
+    padding: 10px
+}
+
+.filterFrame {
+    justify-content: center;
+    margin: auto;
+    background: linear-gradient(to bottom, #312d2ad7, #5c91bd); 
+    width: 400px;
+    padding: 10px;
+}
+
+.button {
+    width: auto;
+    margin: 10px;
+    border-radius: 20px;
+
+    background: linear-gradient(to top, #312d2ad7, #cabab4);
+    outline: none;
+}
+
+button:focus { 
+    outline: none
+}

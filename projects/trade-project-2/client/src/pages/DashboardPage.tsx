@@ -5,11 +5,15 @@ import Filter from "../components/Filters";
 import Analytics from "../components/Analytics";
 import CandleList from "../components/CandleList";
 
+// Styles
+import "../styles/DashboardPage.css"
+
 import { getCandles } from "../api/candles";
 import { useEffect, useState } from "react";
 import type { CandleState } from "../types/CandleState";
 import useAuth from "../hooks/useAuth";
 import { getErrorMessage } from "../api/getErrorMessage";
+
 
 export default function DashboardPage() {
 
@@ -44,9 +48,9 @@ export default function DashboardPage() {
 
     return (
         <div>
-            <h1><b>Market Data Explorer</b> </h1>
-            <button className="logout" onClick={logout} > Logout </button>
-            <div>
+            <h1 className="dbPageTitle"><b>Market Data Explorer</b> </h1>
+            <button className="button" onClick={logout} > Logout </button>
+            <div className="filterFrame">
                 <Filter
                 instrument={instrument}
                 timeframe={timeframe}
@@ -59,13 +63,11 @@ export default function DashboardPage() {
                 changeFrom={setFrom}
                 changeTo={setTo}
                 changeLimit={setLimit}/>
+                <button className="button" onClick={getData}>Load Candles</button>
             </div>
 
-            <div>
-                <button onClick={getData}>Load Candles</button>
-            </div>
 
-            <div>{candleState.state === "success" && <Analytics candles={candleState.candles}/>}</div>
+            <div className="analytics">{candleState.state === "success" && <Analytics candles={candleState.candles}/>}</div>
             <div className="candleData"> 
                 {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && <CandleList candles={candleState.candles}/>}
             </div>

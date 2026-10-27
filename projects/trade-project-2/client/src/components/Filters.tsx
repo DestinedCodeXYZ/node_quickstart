@@ -1,11 +1,10 @@
 import type { FilterProps } from "../types/Filter";
-import '../styles/Filter.css';
 
 export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: FilterProps){
     
     return (
         <div>
-            <p className="filterFrame">  
+            <p className="filter">  
                 <label> 
                     Instrument:
                     <select value = {instrument} 
@@ -49,6 +48,7 @@ export default function Filter({instrument, timeframe, from, to, limit, changeIn
                     placeholder="Enter limit amount (max 10000)" 
                     />
                 </label>   
+                
             </p>
         </div>
     )

@@ -5,7 +5,6 @@ import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
 import type { Candle } from "../models/Candle.js";
 import { AppError } from "../classes/errorClasses.js";
-import { error } from "node:console";
 
 const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
@@ -13,6 +12,8 @@ const TIMEFRAMES = ["m15", "h1", "h4"];
 export async function getCandles(req: Request, res: Response, next: NextFunction) {
 
         const { instrument, timeframe, from, to, limit } = req.query;
+
+        const filter: QueryFilter<Candle> = {};
 
         // Checking for required params
         if ( !instrument || !timeframe ) {
@@ -27,7 +28,8 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
            throw new AppError(400, "Invalid query parameters", true)
         }
 
-        const filter: QueryFilter<Candle> = {};
+        filter.instrument = instrument;
+        filter.timeframe = timeframe;
 
         // Checking for optional params
         if (from || to) {
@@ -77,11 +79,9 @@ export async function getCandles(req: Request, res: Response, next: NextFunction
             queryLimit = parsedLimit;
         }
 
-    const collectionName = `candles_${instrument.toLowerCase()}_${timeframe.toLowerCase()}`;
 
-    console.log(`Collection name: ${collectionName}`);
 
-    const tradedata = getCandleCollection(collectionName);
+    const tradedata = getCandleCollection("candles");
 
     const candles = await tradedata.find(filter).limit(queryLimit).sort({timestamp: 1});
 

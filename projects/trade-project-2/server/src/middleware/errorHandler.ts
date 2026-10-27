@@ -1,4 +1,4 @@
-import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../classes/errorClasses.js";
 
 export const errorHandler = 

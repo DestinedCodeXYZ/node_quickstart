@@ -62,6 +62,6 @@ const candleSchema = new mongoose.Schema<Candle>({
 export function getCandleCollection( collectionName: string ): mongoose.Model<Candle> {
     return (
         mongoose.models[collectionName] as mongoose.Model<Candle> ||
-        mongoose.model<Candle>(collectionName, candleSchema, collectionName)
+        mongoose.model<Candle>("Candle", candleSchema, "candles")
     )
 } 

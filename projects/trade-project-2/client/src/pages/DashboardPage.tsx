@@ -44,10 +44,10 @@ export default function DashboardPage() {
 
     return (
         <div>
-            <h1><b>Market Data Explorer</b> <button onClick={logout}> Logout </button></h1>
-            
+            <h1><b>Market Data Explorer</b> </h1>
+            <button className="logout" onClick={logout} > Logout </button>
             <div>
-                <Filter 
+                <Filter
                 instrument={instrument}
                 timeframe={timeframe}
                 from={from}

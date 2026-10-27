@@ -1,11 +1,11 @@
 import type { FilterProps } from "../types/Filter";
+import '../styles/Filter.css';
 
 export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: FilterProps){
     
     return (
         <div>
-            <p>
-                
+            <p className="filterFrame">  
                 <label> 
                     Instrument:
                     <select value = {instrument} 

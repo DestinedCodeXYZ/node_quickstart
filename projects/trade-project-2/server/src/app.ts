@@ -11,6 +11,7 @@ import registerRoute from "./routes/registerRoute.js";
 import { requireAuth } from './middleware/requireAuth.js';
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
+import { limiter } from "./middleware/rateLimiter.js";
 
 const app = express();
 
@@ -21,6 +22,8 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+app.use(limiter)
 
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()}: ${req.method} ${req.url}`)

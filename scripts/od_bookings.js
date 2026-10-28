@@ -38,8 +38,6 @@ async function run() {
                 }
             },
 
-            
-
             { 
                 $unwind: { 
                     path: "$enq",
@@ -94,7 +92,41 @@ async function run() {
                 }
             },
 
+            // Join table to itself for parent-child relationship
+            { $lookup: 
+                {
+                    from: "bookings",
+                    localField: "extension.parent",
+                    foreignField: "_id",
+                    as: "parent"
+                }
+            },
+
+            { $unwind: {path: "$parent", preserveNullAndEmptyArrays: true} },
             
+            // Join chosenproperties onto parent, then properties onto chosenproperties to get previous property names.
+
+            { $lookup:
+                {
+                    from: "chosenproperties",
+                    localField: "parent.property",
+                    foreignField: "_id",
+                    as: "previousChosenProp"
+                }
+            },
+
+            { $unwind: {path: "$previousChosenProp", preserveNullAndEmptyArrays: true}},
+
+            { $lookup:
+                {
+                    from: "properties",
+                    localField: "previousChosenProp.propertyRef",
+                    foreignField: "_id",
+                    as: "previousProp"
+                }
+            },
+
+            { $unwind: {path: "$previousProp", preserveNullAndEmptyArrays: true}},
 
             // Joining chosenproperties for detail on who added the selected property
             { $lookup:
@@ -238,6 +270,8 @@ async function run() {
                     guestPhone2: { $first: { $slice: ["$client.phoneNumbers.phone", 1, 1] } },
                     guestEmail1: { $first: "$client.emailAddresses.email"},
                     guestEmail2: { $first: { $slice: ["$client.emailAddresses.email", 1, 1] } },
+                    totalAdults: "$enq.request.propertyPreferences.guests.totalAdults",
+                    totalChildren: "$enq.request.propertyPreferences.guests.totalChildren",
                     checkIn: {$toDate: "$checkIn"},
                     checkOut: {$toDate: "$checkOut"},
                     homeAddress: "$address.freeFormAddress",
@@ -334,7 +368,13 @@ async function run() {
                             }
                         ]}
                     },
-                    newLL: "$newLL"
+                    newLL: "$newLL",
+                    sameProp: { $expr: {
+                            $cond: [{
+                                $eq: ["$prop.name", "$previousProp.name"]
+                            }, true, false]
+                        }
+                    }
                 }
             }
 

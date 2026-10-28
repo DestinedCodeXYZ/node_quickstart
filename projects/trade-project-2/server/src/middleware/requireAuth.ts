@@ -7,14 +7,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 
   if (!token) {
-    throw new AppError(401, "Can't find valid token.")
+    throw new AppError(401, "Invalid/Expired token.")
   }
 
   try {
     res.locals.user = jwt.verify(token, process.env.JWT_TOKEN!);
     
   } catch {
-    throw new AppError(401, "Can't find valid token.")
+    throw new AppError(401, "Invalid/Expired token.")
   }
   
   next();

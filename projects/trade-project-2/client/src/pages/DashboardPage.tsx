@@ -8,43 +8,27 @@ import CandleList from "../components/CandleList";
 // Styles
 import "../styles/DashboardPage.css"
 
-import { getCandles } from "../api/candles";
-import { useEffect, useState } from "react";
-import type { CandleState } from "../types/CandleState";
+// Hooks
 import useAuth from "../hooks/useAuth";
-import { getErrorMessage } from "../api/getErrorMessage";
+import useFilters from "../hooks/useFilters";
+import useCandleState from "../hooks/useCandleState";
 
+// Other
+import { useEffect, useRef } from "react";
 
 export default function DashboardPage() {
 
     const { logout } = useAuth();
-  // Filter inputs
-    const [instrument, setInstrument] = useState('eurusd');
-    const [timeframe, setTimeFrame] = useState('h1');
-    const [from, setFrom] = useState('2017-01-01T00:00Z');
-    const [to, setTo] = useState('2017-01-02T00:00Z');
-    const [limit, setLimit] = useState(100);
 
-    const [candleState, setCandleState] = useState<CandleState>({state: "loading"});
+  // Filter inputs
+    const { filters, setFilters } = useFilters();
+    const { candleState, loadCandles } = useCandleState();
+
+    const intialFilters = useRef(filters);
 
     useEffect(() => {
-        getData()
-    }, [])
-
-    // Function to get candle data on click.
-    async function getData() {
-
-        setCandleState({ state: "loading" })
-
-        try {
-            const data = await getCandles({instrument, timeframe, from, to, limit});
-            setCandleState({ state: "success", candles: data});
-        }
-
-        catch (err) {
-            setCandleState({state: "error", message: getErrorMessage(err)});
-        }
-    }
+        loadCandles(intialFilters.current)
+    }, [loadCandles])
 
     return (
         <div>
@@ -52,25 +36,27 @@ export default function DashboardPage() {
             <button className="button" onClick={logout} > Logout </button>
             <div className="filterFrame">
                 <Filter
-                instrument={instrument}
-                timeframe={timeframe}
-                from={from}
-                to={to}
-                limit={limit}
+                instrument={filters.instrument}
+                timeframe={filters.timeframe}
+                from={filters.from}
+                to={filters.to}
+                limit={filters.limit}
                   
-                changeInstrument={setInstrument}
-                changeTimeframe={setTimeFrame}
-                changeFrom={setFrom}
-                changeTo={setTo}
-                changeLimit={setLimit}/>
-                <button className="button" onClick={getData}>Load Candles</button>
+                changeInstrument={(instrument) => setFilters((current) => ({ ...current, instrument}))}
+                changeTimeframe={(timeframe) => setFilters((current) => ({ ...current, timeframe}))}
+                changeFrom={(from) => setFilters((current) => ({ ...current, from}))}
+                changeTo={(to) => setFilters((current) => ({ ...current, to}))}
+                changeLimit={(limit) => setFilters((current) => ({ ...current, limit}))} 
+                />    
             </div>
 
 
-            <div className="analytics">{candleState.state === "success" && <Analytics candles={candleState.candles}/>}</div>
+            <div className="analytics">
+                {candleState.state === "success" && <Analytics candles={candleState.candles}/>}
+            </div>
             <div className="candleData"> 
-                {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && <CandleList candles={candleState.candles}/>}
+                    {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && candleState.candles.length > 0 && <CandleList candles={candleState.candles}/>}
             </div>
-            </div>
+        </div>
     )
 }

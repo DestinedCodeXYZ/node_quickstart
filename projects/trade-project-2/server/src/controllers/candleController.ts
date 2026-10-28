@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 
 import type { QueryFilter } from "mongoose";
 import { getCandleCollection } from "../models/Candle.js";
@@ -9,7 +9,7 @@ import { AppError } from "../classes/errorClasses.js";
 const INSTRUMENTS = ["eurgbp", "eurusd", "gbpusd", "usatechidxusd"];
 const TIMEFRAMES = ["m15", "h1", "h4"];
 
-export async function getCandles(req: Request, res: Response, next: NextFunction) {
+export async function getCandles(req: Request, res: Response) {
 
         const { instrument, timeframe, from, to, limit } = req.query;
 

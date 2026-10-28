@@ -9,5 +9,6 @@ export type AuthState =
 export type AuthContextValue = {
     auth: AuthState;
     login: (credentials: LoginCredentials) => Promise<void>;
+    register: (credentials: LoginCredentials) => Promise<void>;
     logout: () => Promise<void>
 } 

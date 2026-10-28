@@ -1,7 +1,10 @@
 import type { FilterProps } from "../types/Filter";
+import useCandleState from "../hooks/useCandleState";
 
 export default function Filter({instrument, timeframe, from, to, limit, changeInstrument, changeTimeframe, changeFrom, changeTo, changeLimit}: FilterProps){
     
+    const { loadCandles } = useCandleState(); 
+
     return (
         <div>
             <p className="filter">  
@@ -47,9 +50,9 @@ export default function Filter({instrument, timeframe, from, to, limit, changeIn
                     onChange={(e) => {changeLimit(e.target.valueAsNumber)}}
                     placeholder="Enter limit amount (max 10000)" 
                     />
-                </label>   
-                
-            </p>
+                </label>
+            </p> <br/>
+            <button type="button" className="button" onClick={() => loadCandles({instrument, timeframe, from, to, limit})}>Load Candles</button>
         </div>
     )
 }

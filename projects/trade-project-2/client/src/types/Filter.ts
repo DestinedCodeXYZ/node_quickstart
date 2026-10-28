@@ -11,3 +11,16 @@ export interface FilterProps {
     changeTo: (value: string) => void;
     changeLimit: (value: number) => void;
 }
+
+export type FilterParams = {
+    instrument: string;
+    timeframe: string;
+    from: string;
+    to: string;
+    limit: number;
+}
+
+export type FilterContextValue = {
+    filters: FilterParams;
+    setFilters: React.Dispatch<React.SetStateAction<FilterParams>>
+}

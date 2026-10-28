@@ -2,8 +2,12 @@ import "./config/env.js";
 import express from 'express';
 import cors from 'cors';
 
-import candleRoutes from "./routes/candleRoutes.js"
+// Routes
+import candleRoutes from "./routes/candleRoutes.js";
 import loginRoute from "./routes/loginRoute.js";
+import registerRoute from "./routes/registerRoute.js";
+
+// Middleware
 import { requireAuth } from './middleware/requireAuth.js';
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
@@ -22,6 +26,8 @@ app.use((req, res, next) => {
     console.log(`${new Date().toISOString()}: ${req.method} ${req.url}`)
     next();
 })
+
+app.use("/api/register", registerRoute);
 
 app.use("/api/login", loginRoute);
 

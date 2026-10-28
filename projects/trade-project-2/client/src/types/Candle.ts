@@ -1,3 +1,5 @@
+import type { FilterParams } from "./Filter";
+
 export interface Candle {
     _id: string;
     timestamp: string;
@@ -10,3 +12,13 @@ export interface Candle {
     close: number;
     volume: number;
 }
+
+export type CandleState = 
+{ state: "loading" } |
+{ state: "success" ; candles: Candle[] } |
+{ state: "error" ; message: string } 
+
+export type CandleContextValue = {
+    candleState: CandleState;
+    loadCandles: (params: FilterParams) => Promise<void>;
+} 

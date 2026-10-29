@@ -9,43 +9,34 @@ export default function Filter({instrument, timeframe, from, to, limit, changeIn
         <div>
             <p className="filter">  
                 <label> 
-                    Instrument:
-                    <select value = {instrument} 
+                    Instrument: <select value = {instrument} 
                     onChange={(e) => {changeInstrument(e.target.value)}}>
                         <option value="eurgbp">EURGBP</option>
                         <option value="eurusd">EURUSD</option>
                         <option value="gbpusd">GBPUSD</option>
                         <option value="usatechidxusd">USATECHIDXUSD</option>
-                    </select>
+                    </select><br/>
                 
-                <br/>
-                 Timeframe:
-                    <select value = {timeframe} 
+                    Timeframe: <select value = {timeframe} 
                     onChange={(e) => {changeTimeframe(e.target.value)}}>
                         <option value="m15">m15</option>
                         <option value="h1">h1</option>
                         <option value="h4">h4</option>
-                    </select>
+                    </select><br/>
                 
-                <br/>
-                 Start:
-                    <input type="datetime-local"
+                    Start: <input type="datetime-local"
                     value={from.slice(0,16)}
                     onChange={(e) => {changeFrom(e.target.value)}}
                     placeholder="Enter 'from' date" 
-                    />
+                    /><br/>
                 
-                <br/>
-                 End:
-                    <input type="datetime-local"
+                    End: <input type="datetime-local"
                     value={to.slice(0,16)}
                     onChange={(e) => {changeTo(e.target.value)}}
                     placeholder="Enter 'to' date" 
-                    />
+                    /><br/>
                 
-                <br/>
-                 Limit:
-                    <input type="number"
+                    Limit: <input type="number"
                     value={limit}
                     onChange={(e) => {changeLimit(e.target.valueAsNumber)}}
                     placeholder="Enter limit amount (max 10000)" 

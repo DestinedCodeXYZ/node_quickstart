@@ -51,11 +51,13 @@ export default function DashboardPage() {
             </div>
 
 
-            <div className="analytics">
+            <div>
                 {candleState.state === "success" && <Analytics candles={candleState.candles}/>}
             </div>
             <div className="candleData"> 
-                    {candleState.state === "loading" ? <Loading/> : candleState.state === "error" ? <IsError error={candleState.message}/> : candleState.state === "success" && candleState.candles.length > 0 && <CandleList candles={candleState.candles}/>}
+                    {candleState.state === "loading" ? <Loading/> : 
+                    candleState.state === "error" ? <IsError error={candleState.message}/> : 
+                    candleState.state === "success" && candleState.candles.length > 0 && <CandleList candles={candleState.candles}/>}
             </div>
         </div>
     )

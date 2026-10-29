@@ -8,7 +8,7 @@ export default function LoginPage() {
 
     return (
         <div>
-            <h1> <b>Login</b> </h1>
+            <h1 className="dbPageTitle"><b>Market Data Explorer</b> </h1>
             <Login onLogin={login} />
             {auth.state === "error" && <p className='authMsg'>{auth.message}</p>}
             {auth.state === "success" && <Navigate to="/candles"/>}

@@ -17,36 +17,30 @@
   background-color: #073983;
 }
 
-.candleTableScroll table {
-  border-collapse: collapse;
-  width: max-content;
-  min-width: 100%;
-}
-
-table {
+.candleTableFrame table {
   border-collapse: collapse;
   background-color: #5c91bd9f;
   width: max-content;
   min-width: 100%;
 }
 
-thead,
-td {
+.candleTableFrame thead,
+.candleTableFrame td {
     padding: 8px 14px;
     white-space: nowrap;
     shape-margin: 30px;
     border-bottom: 2px solid black;
 }
 
-td:hover {
+.candleTableFrame td:hover {
     background-color: rgba(60, 158, 127, 0.815);
 }
 
-th:first-child,
-td:first-child {
+.candleTableFrame th:first-child,
+.candleTableFrame td:first-child {
     text-align: center;
 }
 
-tbody:nth-child(even) {
+.candleTableFrame tbody:nth-child(even) {
     background-color: rgba(32, 52, 105, 0.678);
 }

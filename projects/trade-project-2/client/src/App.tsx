@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import RegisterPage from './pages/RegisterPage';
 import PrivateRoute from './routes/PrivateRoute';
 import { AppProviders } from './components/AppProvider';
+
 function App() {
 
   return (

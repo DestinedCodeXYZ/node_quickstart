@@ -3,17 +3,34 @@
     to { opacity: 100%; };
 }
 
+h2 {
+    background: rgb(24, 63, 114);
+    padding: 5px;
+    border-radius: 10px;
+}
+
 form {
     justify-content: center;
     display: inline-block;
     width: 400px;
-    height: 80px;
+    height: 130px;
     margin: 10px;
 
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
     background: linear-gradient(to top, #312d2ad7, #5c91bd);
     padding: 20px
+
+}
+
+input[type=text] {
+    border: 1px solid black;
+    border-radius: 20px;
+}
+
+input[type=password] {
+    border: 1px solid black;
+    border-radius: 20px;
 }
 
 .authMsg {
